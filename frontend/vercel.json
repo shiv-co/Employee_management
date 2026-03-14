@@ -1,9 +1,10 @@
+
+
 {
-  "version": 2,
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/api/:path*",
+      "destination": "https://employee-management-ih5r1jspf-shivam-singhs-projects-e9ef9bb8.vercel.app/api/:path*"
     }
   ]
 }
