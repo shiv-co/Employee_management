@@ -1,4 +1,4 @@
-const app = require('../src/app');
+const app = require("../backend/src/app");
 const connectDB = require('../src/config/db');
 
 const defaultAllowedOrigins = [
