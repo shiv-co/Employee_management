@@ -42,15 +42,17 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/api/health', (_req, res) => {
+const healthHandler = (_req, res) => {
   res.status(200).json({ status: 'Backend working' });
-});
+};
 
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
+app.use('/v1', routes);
 app.use('/api/v1', routes);
 
 app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
-
-
