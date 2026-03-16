@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const response = await api.post('/api/v1/auth/login', { email, password });
+    const response = await api.post('/v1/auth/login', { email, password });
     const payload = response.data?.data;
     persistAuth(payload);
     return payload;
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
     const refreshToken = localStorage.getItem('refreshToken');
     try {
       if (refreshToken) {
-        await api.post('/api/v1/auth/logout', { refreshToken });
+        await api.post('/v1/auth/logout', { refreshToken });
       }
     } catch (_error) {
       // Ignore logout errors and clear client session.
