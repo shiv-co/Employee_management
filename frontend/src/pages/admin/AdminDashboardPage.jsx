@@ -155,7 +155,7 @@ export default function AdminDashboardPage() {
         <div className="space-y-2">
           {reports.slice(0, 6).map((report) => (
             <article key={report._id} className="rounded-lg border border-slate-200 p-3 text-sm">
-              <p className="font-medium text-slate-800">{report.user.name || 'Employee1'}</p>
+              <p className="font-medium text-slate-800">{report.employeeId?.name || 'Employee1'}</p>
               <p className="text-slate-500">Date: {report.date}</p>
               <p className="text-slate-600">Completed: {(report.completedTasks || []).join(', ') || '-'}</p>
             </article>
