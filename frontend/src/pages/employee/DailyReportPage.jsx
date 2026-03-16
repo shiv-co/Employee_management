@@ -25,7 +25,7 @@ export default function DailyReportPage() {
     setError('');
 
     try {
-      const response = await api.post('/reports/daily', {
+      const response = await api.post('/v1/reports/daily', {
         completedTasks: toLinesArray(completedTasksText),
         tasksInProgress: toLinesArray(tasksInProgressText),
         blockers,
@@ -118,3 +118,4 @@ export default function DailyReportPage() {
     </>
   );
 }
+

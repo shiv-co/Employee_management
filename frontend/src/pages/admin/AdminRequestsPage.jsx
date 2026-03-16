@@ -13,8 +13,8 @@ export default function AdminRequestsPage() {
     setLoading(true);
     try {
       const [leaveRes, correctionRes] = await Promise.all([
-        api.get('/leaves'),
-        api.get('/attendance/corrections')
+        api.get('/v1/leaves'),
+        api.get('/v1/attendance/corrections')
       ]);
       setLeaveRequests(leaveRes.data?.data || []);
       setCorrectionRequests(correctionRes.data?.data || []);
@@ -31,7 +31,7 @@ export default function AdminRequestsPage() {
 
   const reviewLeave = async (id, status) => {
     try {
-      await api.patch(`/leaves/${id}/review`, { status });
+      await api.patch(`/v1/leaves/${id}/review`, { status });
       toast.success(`Leave request ${status}`);
       await fetchRequests();
     } catch (apiError) {
@@ -41,7 +41,7 @@ export default function AdminRequestsPage() {
 
   const reviewCorrection = async (id, status) => {
     try {
-      await api.patch(`/attendance/corrections/${id}/review`, { status });
+      await api.patch(`/v1/attendance/corrections/${id}/review`, { status });
       toast.success(`Correction request ${status}`);
       await fetchRequests();
     } catch (apiError) {
@@ -127,3 +127,4 @@ export default function AdminRequestsPage() {
     </>
   );
 }
+

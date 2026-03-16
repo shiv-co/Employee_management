@@ -58,7 +58,7 @@ export default function TaskListPage() {
     setError('');
 
     try {
-      const response = await api.get('/tasks/me');
+      const response = await api.get('/v1/tasks/me');
       setTasks(response.data?.data || []);
     } catch (apiError) {
       setError(apiError.response?.data?.message || 'Failed to load tasks');
@@ -108,7 +108,7 @@ export default function TaskListPage() {
 
   const handleStatusChange = async (taskId, status) => {
     try {
-      await api.patch(`/tasks/${taskId}/status`, { status });
+      await api.patch(`/v1/tasks/${taskId}/status`, { status });
       setTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status } : task)));
       if (status === 'Completed') {
         toast.success('Task completed');
@@ -125,7 +125,7 @@ export default function TaskListPage() {
   const createPersonalTask = async (event) => {
     event.preventDefault();
     try {
-      await api.post('/tasks', { ...personalForm, taskType: 'personal' });
+      await api.post('/v1/tasks', { ...personalForm, taskType: 'personal' });
       toast.success('Personal task created');
       setPersonalForm(personalInitial);
       await fetchTasks();
@@ -264,3 +264,4 @@ export default function TaskListPage() {
     </>
   );
 }
+

@@ -19,7 +19,7 @@ export default function LeavePage() {
   const fetchLeaves = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/leaves/me');
+      const response = await api.get('/v1/leaves/me');
       setRequests(response.data?.data || []);
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to load leave requests');
@@ -35,7 +35,7 @@ export default function LeavePage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      await api.post('/leaves', formData);
+      await api.post('/v1/leaves', formData);
       toast.success('Leave request submitted');
       setFormData(initialForm);
       await fetchLeaves();
@@ -111,3 +111,4 @@ export default function LeavePage() {
     </>
   );
 }
+

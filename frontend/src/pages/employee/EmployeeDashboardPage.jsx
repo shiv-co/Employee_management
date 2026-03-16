@@ -32,8 +32,8 @@ export default function EmployeeDashboardPage() {
 
     try {
       const [attendanceRes, tasksRes] = await Promise.all([
-        api.get(`/attendance/me?from=${today}&to=${today}`),
-        api.get('/tasks/me')
+        api.get(`/v1/attendance/me?from=${today}&to=${today}`),
+        api.get('/v1/tasks/me')
       ]);
 
       setAttendanceToday(attendanceRes.data?.data?.[0] || null);
@@ -159,3 +159,4 @@ export default function EmployeeDashboardPage() {
     </>
   );
 }
+

@@ -21,9 +21,9 @@ export default function EmployeeProfilePage() {
 
       try {
         const [attendanceRes, tasksRes, leavesRes] = await Promise.all([
-          api.get('/attendance/me'),
-          api.get('/tasks/me'),
-          api.get('/leaves/me')
+          api.get('/v1/attendance/me'),
+          api.get('/v1/tasks/me'),
+          api.get('/v1/leaves/me')
         ]);
         setAttendance(attendanceRes.data?.data || []);
         setTasks(tasksRes.data?.data || []);
@@ -127,3 +127,4 @@ export default function EmployeeProfilePage() {
     </>
   );
 }
+

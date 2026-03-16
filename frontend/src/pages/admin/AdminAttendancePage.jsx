@@ -26,7 +26,7 @@ export default function AdminAttendancePage() {
 
       const [employeesRes, attendanceRes] = await Promise.all([
         api.get('/v1/employees'),
-        api.get(`/attendance${params.toString() ? `?${params}` : ''}`)
+        api.get(`/v1/attendance${params.toString() ? `?${params}` : ''}`)
       ]);
 
       setEmployees((employeesRes.data?.data || []).filter((user) => user.role === 'employee'));
@@ -192,4 +192,5 @@ export default function AdminAttendancePage() {
     </>
   );
 }
+
 

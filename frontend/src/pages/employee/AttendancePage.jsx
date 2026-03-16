@@ -39,8 +39,8 @@ export default function AttendancePage() {
 
     try {
       const [attendanceRes, correctionRes] = await Promise.all([
-        api.get('/attendance/me'),
-        api.get('/attendance/corrections/me')
+        api.get('/v1/attendance/me'),
+        api.get('/v1/attendance/corrections/me')
       ]);
       setRecords(attendanceRes.data?.data || []);
       setCorrections(correctionRes.data?.data || []);
@@ -101,7 +101,7 @@ export default function AttendancePage() {
     event.preventDefault();
 
     try {
-      await api.post('/attendance/corrections', {
+      await api.post('/v1/attendance/corrections', {
         ...correctionForm,
         correctCheckIn: correctionForm.correctCheckIn || null,
         correctCheckOut: correctionForm.correctCheckOut || null
@@ -118,7 +118,7 @@ export default function AttendancePage() {
     event.preventDefault();
 
     try {
-      await api.post('/attendance/manual-entry', manualForm);
+      await api.post('/v1/attendance/manual-entry', manualForm);
       toast.success('Manual attendance entry submitted');
       setManualForm(manualInitialState);
       await fetchAttendance();
@@ -265,3 +265,4 @@ export default function AttendancePage() {
     </>
   );
 }
+
