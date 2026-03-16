@@ -1,24 +1,11 @@
 const app = require("../src/app");
 const connectDB = require("../src/config/db");
 
-let connectionPromise;
-
-async function ensureDatabaseConnection() {
-  try {
-    if (!connectionPromise) {
-      connectionPromise = connectDB();
-    }
-
-    await connectionPromise;
-  } catch (error) {
-    console.error("Database connection failed:", error);
-    throw error;
-  }
-}
+let dbConnected = false;
 
 module.exports = async (req, res) => {
   try {
-    // CORS headers
+    // CORS
     res.setHeader(
       "Access-Control-Allow-Origin",
       "https://employee-management-9azq.vercel.app"
@@ -33,23 +20,24 @@ module.exports = async (req, res) => {
     );
     res.setHeader("Access-Control-Allow-Credentials", "true");
 
-    // Handle preflight
     if (req.method === "OPTIONS") {
       res.status(200).end();
       return;
     }
 
-    // Ensure DB connection before processing request
-    await ensureDatabaseConnection();
+    // Ensure DB connection
+    if (!dbConnected) {
+      await connectDB();
+      dbConnected = true;
+    }
 
-    // Pass request to Express app
     return app(req, res);
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("Serverless error:", error);
 
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Server error",
       error: error.message
     });
   }
