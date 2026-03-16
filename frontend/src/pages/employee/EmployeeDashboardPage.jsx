@@ -61,7 +61,7 @@ export default function EmployeeDashboardPage() {
   const handleAttendanceAction = async (type) => {
     setActionLoading(true);
     try {
-      const endpoint = type === 'check-in' ? '/attendance/check-in' : '/attendance/check-out';
+      const endpoint = type === 'check-in' ? '/v1/attendance/check-in' : '/v1/attendance/check-out';
       const response = await api.post(endpoint);
       toast.success(response.data?.message || 'Attendance updated');
       await fetchData();
@@ -159,4 +159,5 @@ export default function EmployeeDashboardPage() {
     </>
   );
 }
+
 
