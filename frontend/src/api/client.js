@@ -1,9 +1,10 @@
 import axios from "axios";
 
+// fixed api base URL to point to the deployed backend on Vercel
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://employee-management-ih5r1jspf-shivam-singhs-projects-e9ef9bb8.vercel.app",
+    "https://employee-management-ih5r1jspf-shivam-singhs-projects-e9ef9bb8.vercel.app/api",
   headers: {
     "Content-Type": "application/json"
   }
