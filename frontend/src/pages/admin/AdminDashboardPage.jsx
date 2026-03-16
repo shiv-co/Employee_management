@@ -35,11 +35,11 @@ export default function AdminDashboardPage() {
 
       try {
         const [overviewRes, taskRes, attendanceRes, employeesRes, reportsRes] = await Promise.all([
-          api.get('/dashboard/admin/overview'),
-          api.get('/dashboard/admin/task-metrics'),
-          api.get('/dashboard/admin/attendance-trends'),
-          api.get('/employees'),
-          api.get('/reports')
+          api.get('/v1/dashboard/admin/overview'),
+          api.get('/v1/dashboard/admin/task-metrics'),
+          api.get('/v1/dashboard/admin/attendance-trends'),
+          api.get('/v1/employees'),
+          api.get('/v1/reports')
         ]);
 
         setOverview(overviewRes.data?.data || null);
@@ -166,3 +166,4 @@ export default function AdminDashboardPage() {
     </>
   );
 }
+

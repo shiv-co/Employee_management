@@ -28,7 +28,7 @@ export default function AdminEmployeesPage() {
     setError('');
 
     try {
-      const response = await api.get('/employees');
+      const response = await api.get('/v1/employees');
       setEmployees(response.data?.data || []);
     } catch (apiError) {
       setError(apiError.response?.data?.message || 'Failed to fetch employees');
@@ -80,7 +80,7 @@ export default function AdminEmployeesPage() {
 
     try {
       if (editingEmployee) {
-        await api.patch(`/employees/${editingEmployee.id}`, {
+        await api.patch(`/v1/employees/${editingEmployee.id}`, {
           name: formData.name,
           role: formData.role,
           department: formData.department,
@@ -88,7 +88,7 @@ export default function AdminEmployeesPage() {
         });
         toast.success('Employee updated');
       } else {
-        await api.post('/employees', {
+        await api.post('/v1/employees', {
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -116,7 +116,7 @@ export default function AdminEmployeesPage() {
 
     setError('');
     try {
-      await api.delete(`/employees/${employee.id}`);
+      await api.delete(`/v1/employees/${employee.id}`);
       toast.success('Employee deleted');
       await fetchEmployees();
     } catch (apiError) {
@@ -323,3 +323,4 @@ export default function AdminEmployeesPage() {
     </>
   );
 }
+

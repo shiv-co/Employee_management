@@ -25,7 +25,7 @@ export default function AdminAttendancePage() {
       if (filters.to) params.append('to', filters.to);
 
       const [employeesRes, attendanceRes] = await Promise.all([
-        api.get('/employees'),
+        api.get('/v1/employees'),
         api.get(`/attendance${params.toString() ? `?${params}` : ''}`)
       ]);
 
@@ -192,3 +192,4 @@ export default function AdminAttendancePage() {
     </>
   );
 }
+

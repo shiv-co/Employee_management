@@ -21,7 +21,7 @@ export default function AdminTaskAssignmentPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [employeesRes, tasksRes] = await Promise.all([api.get('/employees'), api.get('/tasks')]);
+      const [employeesRes, tasksRes] = await Promise.all([api.get('/v1/employees'), api.get('/v1/tasks')]);
       setEmployees((employeesRes.data?.data || []).filter((item) => item.role === 'employee'));
       setTasks(tasksRes.data?.data || []);
     } catch (apiError) {
@@ -38,7 +38,7 @@ export default function AdminTaskAssignmentPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      await api.post('/tasks', {
+      await api.post('/v1/tasks', {
         ...formData,
         taskType: 'assigned'
       });
@@ -132,3 +132,4 @@ export default function AdminTaskAssignmentPage() {
     </>
   );
 }
+

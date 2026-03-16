@@ -10,6 +10,7 @@ build/
 
 # Ignore environment variables
 .env
+.env.production
 .env.local
 
 # Ignore OS files
