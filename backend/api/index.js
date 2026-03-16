@@ -5,6 +5,7 @@ require('../src/config/env');
 const defaultAllowedOrigins = [
   'http://localhost:5173',
   'https://employee-management-9azq.vercel.app',
+  'https://www.biztracker.co.in/',
   'https://employee-management-9azq-kwy70b1w1.vercel.app'
 ];
 
