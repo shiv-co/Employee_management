@@ -13,7 +13,7 @@ export default function NotificationsPage() {
     setLoading(true);
     try {
       const query = showUnreadOnly ? '?unreadOnly=true' : '';
-      const response = await api.get(`/api/v1/notifications/me${query}`);
+      const response = await api.get(`/v1/notifications/me${query}`);
       setNotifications(response.data?.data || []);
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to load notifications');
@@ -33,7 +33,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id) => {
     try {
-      await api.patch(`/api/v1/notifications/${id}/read`);
+      await api.patch(`/v1/notifications/${id}/read`);
       setNotifications((prev) => prev.map((item) => (item._id === id ? { ...item, isRead: true } : item)));
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Unable to mark as read');
@@ -42,7 +42,7 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (id) => {
     try {
-      await api.delete(`/api/v1/notifications/${id}`);
+      await api.delete(`/v1/notifications/${id}`);
       setNotifications((prev) => prev.filter((item) => item._id !== id));
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Unable to delete notification');
@@ -104,6 +104,7 @@ export default function NotificationsPage() {
     </>
   );
 }
+
 
 
 

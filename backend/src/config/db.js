@@ -1,4 +1,5 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
+const env = require('./env');
 
 let cached = global.mongoose;
 
@@ -6,24 +7,28 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-const connectDB = async () => {
+async function connectDB() {
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
-    const opts = {
-      bufferCommands: false
-    };
-
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => { 
-      console.log("MongoDB connected");
-      return mongoose;
-    });
+    cached.promise = mongoose
+      .connect(env.mongodbUri, {
+        bufferCommands: false
+      })
+      .then((mongooseInstance) => {
+        console.log('Mongo connected');
+        return mongooseInstance;
+      })
+      .catch((error) => {
+        cached.promise = null;
+        throw error;
+      });
   }
 
   cached.conn = await cached.promise;
   return cached.conn;
-};
+}
 
 module.exports = connectDB;

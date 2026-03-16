@@ -4,7 +4,7 @@ import axios from "axios";
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://employee-management-ih5r1jspf-shivam-singhs-projects-e9ef9bb8.vercel.app/api",
+    "https://employee-management-bay-seven.vercel.app/api",
   headers: {
     "Content-Type": "application/json"
   }

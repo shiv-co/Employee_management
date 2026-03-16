@@ -89,7 +89,7 @@ export default function AppLayout() {
 
     const pollNotifications = async () => {
       try {
-        const response = await api.get('/api/v1/notifications/me?unreadOnly=true');
+        const response = await api.get('/v1/notifications/me?unreadOnly=true');
         const unread = response.data?.data || [];
         if (!unread.length || !active) return;
 
@@ -97,7 +97,7 @@ export default function AppLayout() {
           toast(item.message, { icon: '??' });
         });
 
-        await api.patch('/api/v1/notifications/me/read-all');
+        await api.patch('/v1/notifications/me/read-all');
       } catch (_error) {
         // Silent polling failures to avoid noisy UX.
       }
@@ -205,5 +205,6 @@ export default function AppLayout() {
     </div>
   );
 }
+
 
 
