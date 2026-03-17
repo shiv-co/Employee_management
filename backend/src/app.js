@@ -8,7 +8,9 @@ const app = express();
 const defaultAllowedOrigins = [
   'http://localhost:5173',
   'https://employee-management-9azq.vercel.app',
-  'https://employee-management-9azq-kwy70b1w1.vercel.app'
+  'https://employee-management-9azq-kwy70b1w1.vercel.app',
+  'https://biztracker.co.in',
+  'https://www.biztracker.co.in'
 ];
 
 const configuredOrigins = (process.env.CORS_ORIGINS || '')
