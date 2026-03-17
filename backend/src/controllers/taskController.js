@@ -1,3 +1,4 @@
+const ExcelJS = require('exceljs');
 const Task = require('../models/Task');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
@@ -45,6 +46,28 @@ const dueDateSort = [
   },
   { $sort: { dueDateSort: 1, createdAt: -1 } }
 ];
+
+const applyTaskUpdates = (task, updates, isAdmin) => {
+  const employeeAllowed = ['status', 'title', 'description', 'priority', 'deadline', 'dueDate', 'dueTime'];
+  const adminAllowed = ['title', 'description', 'assignedTo', 'priority', 'status', 'deadline', 'dueDate', 'dueTime', 'taskType'];
+  const allowed = isAdmin ? adminAllowed : employeeAllowed;
+
+  allowed.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(updates, field)) {
+      if (field === 'status') task[field] = normalizeStatus(updates[field]);
+      else if (field === 'priority') task[field] = normalizePriority(updates[field]);
+      else if (field === 'deadline' || field === 'dueDate') {
+        const normalizedDueDate = normalizeDueDate(updates.deadline, updates.dueDate);
+        task.deadline = normalizedDueDate;
+        task.dueDate = normalizedDueDate;
+      } else if (field === 'dueTime') {
+        task.dueTime = normalizeDueTime(updates.dueTime);
+      } else {
+        task[field] = updates[field];
+      }
+    }
+  });
+};
 
 const createTask = asyncHandler(async (req, res) => {
   const {
@@ -136,6 +159,41 @@ const listTasks = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: tasks });
 });
 
+const exportTasks = asyncHandler(async (_req, res) => {
+  const tasks = await Task.find({})
+    .populate('assignedTo', 'name email')
+    .sort({ createdAt: -1 });
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Tasks');
+
+  worksheet.columns = [
+    { header: 'Task Title', key: 'title', width: 30 },
+    { header: 'Assigned To', key: 'assignedTo', width: 28 },
+    { header: 'Status', key: 'status', width: 18 },
+    { header: 'Priority', key: 'priority', width: 18 },
+    { header: 'Assigned Date', key: 'assignedDate', width: 24 },
+    { header: 'Deadline', key: 'deadline', width: 24 }
+  ];
+
+  tasks.forEach((task) => {
+    worksheet.addRow({
+      title: task.title,
+      assignedTo: task.assignedTo?.name || '-',
+      status: normalizeStatus(task.status),
+      priority: normalizePriority(task.priority),
+      assignedDate: task.createdAt ? new Date(task.createdAt).toLocaleString() : '-',
+      deadline: task.deadline ? new Date(task.deadline).toLocaleString() : '-'
+    });
+  });
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="tasks-report.xlsx"');
+
+  await workbook.xlsx.write(res);
+  res.end();
+});
+
 const updateTask = asyncHandler(async (req, res) => {
   const task = await Task.findById(req.params.id);
   if (!task) {
@@ -148,26 +206,7 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Not authorized to update this task');
   }
 
-  const employeeAllowed = ['status', 'title', 'description', 'priority', 'deadline', 'dueDate', 'dueTime'];
-  const adminAllowed = ['title', 'description', 'assignedTo', 'priority', 'status', 'deadline', 'dueDate', 'dueTime', 'taskType'];
-  const allowed = isAdmin ? adminAllowed : employeeAllowed;
-
-  allowed.forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-      if (field === 'status') task[field] = normalizeStatus(req.body[field]);
-      else if (field === 'priority') task[field] = normalizePriority(req.body[field]);
-      else if (field === 'deadline' || field === 'dueDate') {
-        const normalizedDueDate = normalizeDueDate(req.body.deadline, req.body.dueDate);
-        task.deadline = normalizedDueDate;
-        task.dueDate = normalizedDueDate;
-      } else if (field === 'dueTime') {
-        task.dueTime = normalizeDueTime(req.body.dueTime);
-      } else {
-        task[field] = req.body[field];
-      }
-    }
-  });
-
+  applyTaskUpdates(task, req.body, isAdmin);
   await task.save();
 
   res.status(200).json({ success: true, message: 'Task updated', data: task });
@@ -211,11 +250,51 @@ const deleteTask = asyncHandler(async (req, res) => {
   });
 });
 
+const updateTodo = asyncHandler(async (req, res) => {
+  const todo = await Task.findById(req.params.id);
+
+  if (!todo || todo.taskType !== 'personal') {
+    throw new ApiError(404, 'Todo not found');
+  }
+
+  const isOwner = todo.assignedTo.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    throw new ApiError(403, 'Not authorized to update this todo');
+  }
+
+  applyTaskUpdates(todo, req.body, false);
+  await todo.save();
+
+  res.status(200).json({ success: true, message: 'Todo updated', data: todo });
+});
+
+const deleteTodo = asyncHandler(async (req, res) => {
+  const todo = await Task.findById(req.params.id);
+
+  if (!todo || todo.taskType !== 'personal') {
+    throw new ApiError(404, 'Todo not found');
+  }
+
+  const isOwner = todo.assignedTo.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    throw new ApiError(403, 'Not authorized to delete this todo');
+  }
+
+  await todo.deleteOne();
+
+  res.status(200).json({ success: true, message: 'Todo deleted successfully' });
+});
+
 module.exports = {
   createTask,
   listMyTasks,
   listTasks,
+  exportTasks,
   updateTask,
   updateTaskStatus,
-  deleteTask
+  deleteTask,
+  updateTodo,
+  deleteTodo
 };

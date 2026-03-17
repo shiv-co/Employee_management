@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FiCheckCircle, FiClock, FiUserCheck, FiUserX, FiUsers } from 'react-icons/fi';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
@@ -60,7 +61,7 @@ export default function AdminDashboardPage() {
         setAttendanceTrends(attendanceRes.data?.data || []);
         setEmployees(employeesRes.data?.data || []);
         setReports(reportsRes.data?.data || []);
-        setRecentTasks(recentTasksRes.data?.data || []);
+        setRecentTasks((recentTasksRes.data?.data || []).slice(0, 5));
       } catch (apiError) {
         setError(apiError.response?.data?.message || 'Failed to load admin dashboard');
       } finally {
@@ -170,14 +171,20 @@ export default function AdminDashboardPage() {
           <div className="space-y-2">
             {recentTasks.map((task) => (
               <article key={task._id} className="rounded-lg border border-slate-200 p-3 text-sm">
-                <p className="font-medium text-slate-800">{task.title}</p>
+                <p className="font-medium text-slate-800">Task: {task.title}</p>
                 <p className="text-slate-600">Assigned To: {task.assignedTo?.name || '-'}</p>
-                <p className="text-slate-600">Assigned By: {task.assignedBy?.name || '-'}</p>
+                <p className="text-slate-600">Status: {mapTaskStatus(task.status)}</p>
                 <p className="text-slate-500">Assigned At: {formatDateTime(task.createdAt)}</p>
               </article>
             ))}
             {!recentTasks.length ? <p className="text-sm text-slate-500">No tasks assigned yet.</p> : null}
           </div>
+          <Link
+            to="/admin/tasks"
+            className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          >
+            View All Tasks
+          </Link>
         </PageCard>
 
         <PageCard title="Recent Daily Reports">

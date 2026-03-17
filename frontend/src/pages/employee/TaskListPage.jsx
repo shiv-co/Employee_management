@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiCheckCircle, FiClock, FiList, FiPlus } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiEdit2, FiList, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
@@ -44,6 +44,15 @@ const personalInitial = {
   dueTime: ''
 };
 
+const editInitial = {
+  id: '',
+  title: '',
+  description: '',
+  priority: 'Medium',
+  dueDate: '',
+  dueTime: ''
+};
+
 const getTaskDueTimestamp = (task) => {
   const datePart = task.dueDate || task.deadline;
   if (!datePart) return Number.MAX_SAFE_INTEGER;
@@ -80,6 +89,8 @@ export default function TaskListPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [personalForm, setPersonalForm] = useState(personalInitial);
+  const [editForm, setEditForm] = useState(editInitial);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -157,6 +168,50 @@ export default function TaskListPage() {
       await fetchTasks();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to create personal task');
+    }
+  };
+
+  const openEditModal = (task) => {
+    setEditForm({
+      id: task._id,
+      title: task.title || '',
+      description: task.description || '',
+      priority: task.priority || 'Medium',
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : '',
+      dueTime: task.dueTime || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async (event) => {
+    event.preventDefault();
+    try {
+      await api.put(`/v1/todos/${editForm.id}`, {
+        title: editForm.title,
+        description: editForm.description,
+        priority: editForm.priority,
+        dueDate: editForm.dueDate || null,
+        dueTime: editForm.dueTime || ''
+      });
+      toast.success('TODO updated');
+      setShowEditModal(false);
+      setEditForm(editInitial);
+      await fetchTasks();
+    } catch (apiError) {
+      toast.error(apiError.response?.data?.message || 'Failed to update TODO');
+    }
+  };
+
+  const handleTodoDelete = async (taskId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this TODO?');
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/v1/todos/${taskId}`);
+      toast.success('TODO deleted');
+      await fetchTasks();
+    } catch (apiError) {
+      toast.error(apiError.response?.data?.message || 'Failed to delete TODO');
     }
   };
 
@@ -267,19 +322,31 @@ export default function TaskListPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <span className={`rounded-full px-3 py-1 text-center text-xs font-medium ${statusTone[task.status]}`}>
-                    {task.status}
-                  </span>
-                  <select
-                    value={task.status}
-                    onChange={(event) => handleStatusChange(task._id, event.target.value)}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-sm"
-                  >
-                    {statuses.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
+                <div className="flex flex-col gap-2 sm:items-end">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span className={`rounded-full px-3 py-1 text-center text-xs font-medium ${statusTone[task.status]}`}>
+                      {task.status}
+                    </span>
+                    <select
+                      value={task.status}
+                      onChange={(event) => handleStatusChange(task._id, event.target.value)}
+                      className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    >
+                      {statuses.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {task.taskType === 'personal' ? (
+                    <div className="flex gap-3 text-sm">
+                      <button type="button" onClick={() => openEditModal(task)} className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-900">
+                        <FiEdit2 /> Edit
+                      </button>
+                      <button type="button" onClick={() => handleTodoDelete(task._id)} className="inline-flex items-center gap-1 text-red-600 hover:text-red-800">
+                        <FiTrash2 /> Delete
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -291,6 +358,72 @@ export default function TaskListPage() {
           {!filteredTasks.length ? <p className="px-2 py-3 text-sm text-slate-500">No tasks match current filters.</p> : null}
         </div>
       </PageCard>
+
+      {showEditModal ? (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-white/50 bg-white p-5 shadow-xl">
+            <h2 className="mb-4 text-lg font-semibold text-slate-900">Edit Personal TODO</h2>
+            <form className="grid gap-3 md:grid-cols-2" onSubmit={handleEditSave}>
+              <label className="text-sm text-slate-700 md:col-span-2">
+                Title
+                <input
+                  value={editForm.title}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, title: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                  required
+                />
+              </label>
+              <label className="text-sm text-slate-700 md:col-span-2">
+                Description
+                <textarea
+                  value={editForm.description}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, description: event.target.value }))}
+                  rows="3"
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                Priority
+                <select
+                  value={editForm.priority}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, priority: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                >
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+              </label>
+              <label className="text-sm text-slate-700">
+                Due Date
+                <input
+                  type="date"
+                  value={editForm.dueDate}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+              <label className="text-sm text-slate-700 md:col-span-2">
+                Due Time
+                <input
+                  type="time"
+                  value={editForm.dueTime}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, dueTime: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+              <div className="flex justify-end gap-2 md:col-span-2">
+                <button type="button" onClick={() => setShowEditModal(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
