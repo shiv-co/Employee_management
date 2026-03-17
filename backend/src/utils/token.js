@@ -3,12 +3,12 @@ const env = require('../config/env');
 
 const createAccessToken = (user) =>
   jwt.sign({ sub: user._id.toString(), role: user.role }, env.jwtAccessSecret, {
-    expiresIn: env.jwtAccessExpiresIn
+    expiresIn: '15m'
   });
 
 const createRefreshToken = (user) =>
   jwt.sign({ sub: user._id.toString() }, env.jwtRefreshSecret, {
-    expiresIn: env.jwtRefreshExpiresIn
+    expiresIn: '7d'
   });
 
 module.exports = {

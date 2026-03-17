@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+const phoneRegex = /^\+?[0-9]{10,15}$/;
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -33,6 +35,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ''
+    },
+    mobileNumber: {
+      type: String,
+      trim: true,
+      default: '',
+      validate: {
+        validator(value) {
+          return !value || phoneRegex.test(value);
+        },
+        message: 'Invalid mobile number format'
+      }
+    },
+    dob: {
+      type: Date,
+      default: null
     },
     isActive: {
       type: Boolean,

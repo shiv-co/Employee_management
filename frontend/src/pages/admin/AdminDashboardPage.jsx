@@ -18,6 +18,17 @@ const mapTaskStatus = (status) => {
   return mapping[status] || status;
 };
 
+const formatDateTime = (value) => {
+  if (!value) return '-';
+  return new Date(value).toLocaleString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,6 +37,7 @@ export default function AdminDashboardPage() {
   const [attendanceTrends, setAttendanceTrends] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [reports, setReports] = useState([]);
+  const [recentTasks, setRecentTasks] = useState([]);
   const [trendView, setTrendView] = useState('weekly');
 
   useEffect(() => {
@@ -34,12 +46,13 @@ export default function AdminDashboardPage() {
       setError('');
 
       try {
-        const [overviewRes, taskRes, attendanceRes, employeesRes, reportsRes] = await Promise.all([
+        const [overviewRes, taskRes, attendanceRes, employeesRes, reportsRes, recentTasksRes] = await Promise.all([
           api.get('/v1/dashboard/admin/overview'),
           api.get('/v1/dashboard/admin/task-metrics'),
           api.get('/v1/dashboard/admin/attendance-trends'),
           api.get('/v1/employees'),
-          api.get('/v1/reports')
+          api.get('/v1/reports'),
+          api.get('/v1/dashboard/admin/recent-tasks')
         ]);
 
         setOverview(overviewRes.data?.data || null);
@@ -47,6 +60,7 @@ export default function AdminDashboardPage() {
         setAttendanceTrends(attendanceRes.data?.data || []);
         setEmployees(employeesRes.data?.data || []);
         setReports(reportsRes.data?.data || []);
+        setRecentTasks(recentTasksRes.data?.data || []);
       } catch (apiError) {
         setError(apiError.response?.data?.message || 'Failed to load admin dashboard');
       } finally {
@@ -151,19 +165,34 @@ export default function AdminDashboardPage() {
         </Suspense>
       </PageCard>
 
-      <PageCard title="Recent Daily Reports">
-        <div className="space-y-2">
-          {reports.slice(0, 6).map((report) => (
-            <article key={report._id} className="rounded-lg border border-slate-200 p-3 text-sm">
-              <p className="font-medium text-slate-800">{report.employeeId?.name || 'Employee1'}</p>
-              <p className="text-slate-500">Date: {report.date}</p>
-              <p className="text-slate-600">Completed: {(report.completedTasks || []).join(', ') || '-'}</p>
-            </article>
-          ))}
-          {!reports.length ? <p className="text-sm text-slate-500">No daily reports submitted yet.</p> : null}
-        </div>
-      </PageCard>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <PageCard title="Recently Assigned Tasks">
+          <div className="space-y-2">
+            {recentTasks.map((task) => (
+              <article key={task._id} className="rounded-lg border border-slate-200 p-3 text-sm">
+                <p className="font-medium text-slate-800">{task.title}</p>
+                <p className="text-slate-600">Assigned To: {task.assignedTo?.name || '-'}</p>
+                <p className="text-slate-600">Assigned By: {task.assignedBy?.name || '-'}</p>
+                <p className="text-slate-500">Assigned At: {formatDateTime(task.createdAt)}</p>
+              </article>
+            ))}
+            {!recentTasks.length ? <p className="text-sm text-slate-500">No tasks assigned yet.</p> : null}
+          </div>
+        </PageCard>
+
+        <PageCard title="Recent Daily Reports">
+          <div className="space-y-2">
+            {reports.slice(0, 6).map((report) => (
+              <article key={report._id} className="rounded-lg border border-slate-200 p-3 text-sm">
+                <p className="font-medium text-slate-800">{report.employeeId?.name || 'Employee'}</p>
+                <p className="text-slate-500">Date: {report.date}</p>
+                <p className="text-slate-600">Completed: {(report.completedTasks || []).join(', ') || '-'}</p>
+              </article>
+            ))}
+            {!reports.length ? <p className="text-sm text-slate-500">No daily reports submitted yet.</p> : null}
+          </div>
+        </PageCard>
+      </div>
     </>
   );
 }
-

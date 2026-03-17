@@ -38,7 +38,6 @@ const getAdminOverview = asyncHandler(async (_req, res) => {
       tasksCompletedToday,
       pendingTasks,
       todaysReports,
-      // Backward compatibility keys
       todaysAttendance: employeesPresentToday,
       openTasks: pendingTasks,
       doneTasks
@@ -112,9 +111,20 @@ const getReportCompliance = asyncHandler(async (req, res) => {
   });
 });
 
+const getRecentAssignedTasks = asyncHandler(async (_req, res) => {
+  const tasks = await Task.find({ taskType: 'assigned' })
+    .populate('assignedTo', 'name email department')
+    .populate('assignedBy', 'name email')
+    .sort({ createdAt: -1 })
+    .limit(8);
+
+  res.status(200).json({ success: true, data: tasks });
+});
+
 module.exports = {
   getAdminOverview,
   getAttendanceTrends,
   getTaskMetrics,
-  getReportCompliance
+  getReportCompliance,
+  getRecentAssignedTasks
 };

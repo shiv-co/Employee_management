@@ -6,18 +6,9 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { createAccessToken, createRefreshToken } = require('../utils/token');
 const env = require('../config/env');
+const { toSafeUser, normalizePhoneNumber, validatePhoneNumber } = require('./employeeController');
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
-
-const safeUser = (userDoc) => ({
-  id: userDoc._id,
-  name: userDoc.name,
-  email: userDoc.email,
-  role: userDoc.role,
-  department: userDoc.department,
-  designation: userDoc.designation,
-  isActive: userDoc.isActive
-});
 
 const issueTokens = async (user) => {
   const accessToken = createAccessToken(user);
@@ -55,7 +46,7 @@ const login = asyncHandler(async (req, res) => {
     success: true,
     message: 'Login successful',
     data: {
-      user: safeUser(user),
+      user: toSafeUser(user),
       ...tokens
     }
   });
@@ -97,7 +88,10 @@ const refresh = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Token refreshed',
-    data: tokens
+    data: {
+      ...tokens,
+      user: toSafeUser(user)
+    }
   });
 });
 
@@ -114,12 +108,36 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const me = asyncHandler(async (req, res) => {
-  res.status(200).json({ success: true, data: safeUser(req.user) });
+  res.status(200).json({ success: true, data: toSafeUser(req.user) });
+});
+
+const updateMe = asyncHandler(async (req, res) => {
+  const updates = {};
+  const allowedFields = ['name', 'department', 'designation', 'mobileNumber', 'dob'];
+
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+      updates[field] = req.body[field];
+    }
+  });
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'mobileNumber')) {
+    updates.mobileNumber = normalizePhoneNumber(updates.mobileNumber || '');
+    validatePhoneNumber(updates.mobileNumber);
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true
+  }).select('-passwordHash');
+
+  res.status(200).json({ success: true, message: 'Profile updated', data: toSafeUser(user) });
 });
 
 module.exports = {
   login,
   refresh,
   logout,
-  me
+  me,
+  updateMe
 };

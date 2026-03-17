@@ -40,7 +40,35 @@ const personalInitial = {
   title: '',
   description: '',
   priority: 'Medium',
-  deadline: ''
+  dueDate: '',
+  dueTime: ''
+};
+
+const getTaskDueTimestamp = (task) => {
+  const datePart = task.dueDate || task.deadline;
+  if (!datePart) return Number.MAX_SAFE_INTEGER;
+
+  const normalizedDate = new Date(datePart);
+  if (Number.isNaN(normalizedDate.getTime())) return Number.MAX_SAFE_INTEGER;
+
+  if (!task.dueTime) return normalizedDate.getTime();
+
+  const [hours = '0', minutes = '0'] = task.dueTime.split(':');
+  normalizedDate.setHours(Number(hours), Number(minutes), 0, 0);
+  return normalizedDate.getTime();
+};
+
+const formatDueDateTime = (task) => {
+  const datePart = task.dueDate || task.deadline;
+  if (!datePart) return 'No due date';
+
+  const dateLabel = new Date(datePart).toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+
+  return task.dueTime ? `${dateLabel}, ${task.dueTime}` : dateLabel;
 };
 
 export default function TaskListPage() {
@@ -82,17 +110,19 @@ export default function TaskListPage() {
 
   const filteredTasks = useMemo(
     () =>
-      normalizedTasks.filter((task) => {
-        const statusMatch = statusFilter === 'all' || task.status === statusFilter;
-        const priorityMatch = priorityFilter === 'all' || task.priority === priorityFilter;
-        const typeMatch = typeFilter === 'all' || task.taskType === typeFilter;
-        const searchMatch =
-          !searchText ||
-          task.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-          task.description?.toLowerCase().includes(searchText.toLowerCase());
+      normalizedTasks
+        .filter((task) => {
+          const statusMatch = statusFilter === 'all' || task.status === statusFilter;
+          const priorityMatch = priorityFilter === 'all' || task.priority === priorityFilter;
+          const typeMatch = typeFilter === 'all' || task.taskType === typeFilter;
+          const searchMatch =
+            !searchText ||
+            task.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+            task.description?.toLowerCase().includes(searchText.toLowerCase());
 
-        return statusMatch && priorityMatch && typeMatch && searchMatch;
-      }),
+          return statusMatch && priorityMatch && typeMatch && searchMatch;
+        })
+        .sort((a, b) => getTaskDueTimestamp(a) - getTaskDueTimestamp(b)),
     [normalizedTasks, priorityFilter, searchText, statusFilter, typeFilter]
   );
 
@@ -110,11 +140,7 @@ export default function TaskListPage() {
     try {
       await api.patch(`/v1/tasks/${taskId}/status`, { status });
       setTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status } : task)));
-      if (status === 'Completed') {
-        toast.success('Task completed');
-      } else {
-        toast.success('Task status updated');
-      }
+      toast.success(status === 'Completed' ? 'Task completed' : 'Task status updated');
     } catch (apiError) {
       const message = apiError.response?.data?.message || 'Status update failed';
       setError(message);
@@ -150,7 +176,7 @@ export default function TaskListPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <PageCard title="Create Personal TODO">
-          <form className="space-y-2" onSubmit={createPersonalTask}>
+          <form className="space-y-3" onSubmit={createPersonalTask}>
             <input
               value={personalForm.title}
               onChange={(event) => setPersonalForm((prev) => ({ ...prev, title: event.target.value }))}
@@ -165,7 +191,7 @@ export default function TaskListPage() {
               rows="2"
               className="w-full rounded-lg border border-slate-300 px-3 py-2"
             />
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-3">
               <select
                 value={personalForm.priority}
                 onChange={(event) => setPersonalForm((prev) => ({ ...prev, priority: event.target.value }))}
@@ -177,8 +203,14 @@ export default function TaskListPage() {
               </select>
               <input
                 type="date"
-                value={personalForm.deadline}
-                onChange={(event) => setPersonalForm((prev) => ({ ...prev, deadline: event.target.value }))}
+                value={personalForm.dueDate}
+                onChange={(event) => setPersonalForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+                className="rounded-lg border border-slate-300 px-3 py-2"
+              />
+              <input
+                type="time"
+                value={personalForm.dueTime}
+                onChange={(event) => setPersonalForm((prev) => ({ ...prev, dueTime: event.target.value }))}
                 className="rounded-lg border border-slate-300 px-3 py-2"
               />
             </div>
@@ -224,21 +256,19 @@ export default function TaskListPage() {
         <div className="space-y-3">
           {filteredTasks.map((task) => (
             <div key={task._id} className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-xl">
                   <p className="font-semibold text-slate-800">{task.title}</p>
                   <p className="mt-1 text-sm text-slate-500">{task.description || 'No description'}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Type: <span className="capitalize">{task.taskType || 'assigned'}</span>
-                    {' | '}
-                    Priority: <span className="capitalize">{task.priority}</span>
-                    {' | '}
-                    Deadline: {task.deadline ? new Date(task.deadline).toLocaleDateString() : '-'}
-                  </p>
+                  <div className="mt-2 space-y-1 text-xs text-slate-500">
+                    <p>Type: <span className="capitalize">{task.taskType || 'assigned'}</span></p>
+                    <p>Priority: <span className="capitalize">{task.priority}</span></p>
+                    <p>Due: {formatDueDateTime(task)}</p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusTone[task.status]}`}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <span className={`rounded-full px-3 py-1 text-center text-xs font-medium ${statusTone[task.status]}`}>
                     {task.status}
                   </span>
                   <select
@@ -264,4 +294,3 @@ export default function TaskListPage() {
     </>
   );
 }
-

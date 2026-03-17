@@ -46,6 +46,10 @@ const taskSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    dueTime: {
+      type: String,
+      default: ''
+    },
     tags: {
       type: [String],
       default: []

@@ -204,7 +204,7 @@ const getMyCorrectionRequests = asyncHandler(async (req, res) => {
 
 const getCorrectionRequests = asyncHandler(async (_req, res) => {
   const corrections = await AttendanceCorrection.find({})
-    .populate('employeeId', 'name email department')
+    .populate('employeeId', 'name department')
     .populate('reviewedBy', 'name email')
     .sort({ createdAt: -1 });
 
@@ -275,3 +275,4 @@ module.exports = {
   getCorrectionRequests,
   reviewCorrectionRequest
 };
+

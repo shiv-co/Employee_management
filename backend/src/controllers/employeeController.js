@@ -2,6 +2,16 @@ const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 
+const phoneRegex = /^\+?[0-9]{10,15}$/;
+
+const normalizePhoneNumber = (value = '') => value.trim();
+
+const validatePhoneNumber = (value) => {
+  if (value && !phoneRegex.test(value)) {
+    throw new ApiError(400, 'Invalid mobile number format');
+  }
+};
+
 const toSafeUser = (userDoc) => ({
   id: userDoc._id,
   name: userDoc.name,
@@ -9,24 +19,46 @@ const toSafeUser = (userDoc) => ({
   role: userDoc.role,
   department: userDoc.department,
   designation: userDoc.designation,
+  mobileNumber: userDoc.mobileNumber || '',
+  dob: userDoc.dob,
   isActive: userDoc.isActive,
   createdAt: userDoc.createdAt,
   updatedAt: userDoc.updatedAt
 });
 
 const createEmployee = asyncHandler(async (req, res) => {
-  const { name, email, password, role = 'employee', department = '', designation = '' } = req.body;
+  const {
+    name,
+    email,
+    password,
+    role = 'employee',
+    department = '',
+    designation = '',
+    mobileNumber = '',
+    dob = null
+  } = req.body;
 
   if (!name || !email || !password) {
     throw new ApiError(400, 'Name, email, and password are required');
   }
+
+  const normalizedMobileNumber = normalizePhoneNumber(mobileNumber);
+  validatePhoneNumber(normalizedMobileNumber);
 
   const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
   if (existingUser) {
     throw new ApiError(409, 'Email already exists');
   }
 
-  const user = new User({ name, email: email.toLowerCase().trim(), role, department, designation });
+  const user = new User({
+    name,
+    email: email.toLowerCase().trim(),
+    role,
+    department,
+    designation,
+    mobileNumber: normalizedMobileNumber,
+    dob: dob || null
+  });
   await user.setPassword(password);
   await user.save();
 
@@ -58,7 +90,7 @@ const getEmployeeById = asyncHandler(async (req, res) => {
 });
 
 const updateEmployee = asyncHandler(async (req, res) => {
-  const allowedFields = ['name', 'department', 'designation', 'role', 'isActive'];
+  const allowedFields = ['name', 'department', 'designation', 'role', 'isActive', 'mobileNumber', 'dob'];
   const updates = {};
 
   allowedFields.forEach((field) => {
@@ -66,6 +98,11 @@ const updateEmployee = asyncHandler(async (req, res) => {
       updates[field] = req.body[field];
     }
   });
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'mobileNumber')) {
+    updates.mobileNumber = normalizePhoneNumber(updates.mobileNumber || '');
+    validatePhoneNumber(updates.mobileNumber);
+  }
 
   const user = await User.findByIdAndUpdate(req.params.id, updates, {
     new: true,
@@ -115,5 +152,8 @@ module.exports = {
   getEmployeeById,
   updateEmployee,
   updateEmployeeStatus,
-  deleteEmployee
+  deleteEmployee,
+  toSafeUser,
+  validatePhoneNumber,
+  normalizePhoneNumber
 };

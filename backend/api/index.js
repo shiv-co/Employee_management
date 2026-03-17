@@ -66,8 +66,7 @@ module.exports = async (req, res) => {
       applyCorsHeaders(req, res);
       res.status(500).json({
         success: false,
-        message: 'Server error',
-        error: error.message
+        message: error.message || 'Server error'
       });
       return;
     }

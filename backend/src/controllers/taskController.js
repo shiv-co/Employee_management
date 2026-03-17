@@ -29,6 +29,14 @@ const normalizePriority = (priority = 'Medium') => {
   return map[priority] || priority;
 };
 
+const normalizeDueDate = (deadline, dueDate) => dueDate || deadline || null;
+const normalizeDueTime = (dueTime) => dueTime || '';
+
+const dueDateSort = [
+  { $addFields: { dueDateSort: { $ifNull: ['$dueDate', '$deadline'] } } },
+  { $sort: { dueDateSort: 1, createdAt: -1 } }
+];
+
 const createTask = asyncHandler(async (req, res) => {
   const {
     title,
@@ -38,6 +46,7 @@ const createTask = asyncHandler(async (req, res) => {
     status = 'Pending',
     deadline = null,
     dueDate = null,
+    dueTime = '',
     taskType
   } = req.body;
 
@@ -58,6 +67,8 @@ const createTask = asyncHandler(async (req, res) => {
     finalAssignedTo = req.user._id;
   }
 
+  const normalizedDueDate = normalizeDueDate(deadline, dueDate);
+
   const task = await Task.create({
     title,
     description,
@@ -66,8 +77,9 @@ const createTask = asyncHandler(async (req, res) => {
     taskType: finalTaskType,
     priority: normalizePriority(priority),
     status: normalizeStatus(status),
-    deadline: deadline || dueDate || null,
-    dueDate: deadline || dueDate || null
+    deadline: normalizedDueDate,
+    dueDate: normalizedDueDate,
+    dueTime: normalizeDueTime(dueTime)
   });
 
   if (req.user.role === 'admin' && finalTaskType === 'assigned') {
@@ -89,11 +101,14 @@ const listMyTasks = asyncHandler(async (req, res) => {
   if (priority) query.priority = normalizePriority(priority);
   if (taskType) query.taskType = taskType;
 
-  const tasks = await Task.find(query)
-    .populate('assignedBy', 'name email')
-    .sort({ createdAt: -1 });
+  const tasks = await Task.aggregate([
+    { $match: query },
+    ...dueDateSort
+  ]);
 
-  res.status(200).json({ success: true, data: tasks });
+  const populatedTasks = await Task.populate(tasks, { path: 'assignedBy', select: 'name email' });
+
+  res.status(200).json({ success: true, data: populatedTasks });
 });
 
 const listTasks = asyncHandler(async (req, res) => {
@@ -104,12 +119,17 @@ const listTasks = asyncHandler(async (req, res) => {
   if (assignedTo) query.assignedTo = assignedTo;
   if (taskType) query.taskType = taskType;
 
-  const tasks = await Task.find(query)
-    .populate('assignedTo', 'name email')
-    .populate('assignedBy', 'name email')
-    .sort({ createdAt: -1 });
+  const tasks = await Task.aggregate([
+    { $match: query },
+    ...dueDateSort
+  ]);
 
-  res.status(200).json({ success: true, data: tasks });
+  const populatedTasks = await Task.populate(tasks, [
+    { path: 'assignedTo', select: 'name email department' },
+    { path: 'assignedBy', select: 'name email' }
+  ]);
+
+  res.status(200).json({ success: true, data: populatedTasks });
 });
 
 const updateTask = asyncHandler(async (req, res) => {
@@ -124,17 +144,20 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Not authorized to update this task');
   }
 
-  const employeeAllowed = ['status', 'title', 'description', 'priority', 'deadline'];
-  const adminAllowed = ['title', 'description', 'assignedTo', 'priority', 'status', 'deadline', 'taskType'];
+  const employeeAllowed = ['status', 'title', 'description', 'priority', 'deadline', 'dueDate', 'dueTime'];
+  const adminAllowed = ['title', 'description', 'assignedTo', 'priority', 'status', 'deadline', 'dueDate', 'dueTime', 'taskType'];
   const allowed = isAdmin ? adminAllowed : employeeAllowed;
 
   allowed.forEach((field) => {
     if (Object.prototype.hasOwnProperty.call(req.body, field)) {
       if (field === 'status') task[field] = normalizeStatus(req.body[field]);
       else if (field === 'priority') task[field] = normalizePriority(req.body[field]);
-      else if (field === 'deadline') {
-        task.deadline = req.body.deadline;
-        task.dueDate = req.body.deadline;
+      else if (field === 'deadline' || field === 'dueDate') {
+        const normalizedDueDate = normalizeDueDate(req.body.deadline, req.body.dueDate);
+        task.deadline = normalizedDueDate;
+        task.dueDate = normalizedDueDate;
+      } else if (field === 'dueTime') {
+        task.dueTime = normalizeDueTime(req.body.dueTime);
       } else {
         task[field] = req.body[field];
       }

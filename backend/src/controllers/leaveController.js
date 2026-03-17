@@ -35,7 +35,7 @@ const getMyLeaveRequests = asyncHandler(async (req, res) => {
 
 const getLeaveRequests = asyncHandler(async (_req, res) => {
   const requests = await LeaveRequest.find({})
-    .populate('employeeId', 'name email department')
+    .populate('employeeId', 'name email department mobileNumber')
     .populate('reviewedBy', 'name email')
     .sort({ createdAt: -1 });
 
@@ -74,3 +74,4 @@ module.exports = {
   getLeaveRequests,
   reviewLeaveRequest
 };
+

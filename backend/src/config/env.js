@@ -28,6 +28,7 @@ requiredVars.forEach(([name, value]) => {
 
 module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
+  isDevelopment: (process.env.NODE_ENV || 'development') === 'development',
   port: Number(process.env.PORT) || 5000,
   mongodbUri,
   jwtAccessSecret,

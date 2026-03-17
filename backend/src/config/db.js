@@ -15,10 +15,14 @@ async function connectDB() {
   if (!cached.promise) {
     cached.promise = mongoose
       .connect(env.mongodbUri, {
+        maxPoolSize: 10,
+        minPoolSize: 2,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
         bufferCommands: false
       })
       .then((mongooseInstance) => {
-        console.log('Mongo connected');
+        console.log('MongoDB connected');
         return mongooseInstance;
       })
       .catch((error) => {

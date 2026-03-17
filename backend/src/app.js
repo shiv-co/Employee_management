@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 const routes = require('./routes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
@@ -50,19 +54,34 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 app.use((req, _res, next) => {
-  console.log(`${req.method} ${req.originalUrl}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
+app.use(helmet());
+app.use(compression());
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-
+app.use(apiLimiter);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+const getDatabaseStatus = () => (mongoose.connection.readyState === 1 ? 'connected' : 'disconnected');
+
 const healthHandler = (_req, res) => {
-  res.status(200).json({ status: 'Backend working' });
+  res.status(200).json({
+    status: 'ok',
+    database: getDatabaseStatus(),
+    timestamp: Date.now()
+  });
 };
 
 app.get('/health', healthHandler);

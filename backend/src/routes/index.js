@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const authRoutes = require('./authRoutes');
 const employeeRoutes = require('./employeeRoutes');
 const attendanceRoutes = require('./attendanceRoutes');
@@ -11,7 +12,11 @@ const notificationRoutes = require('./notificationRoutes');
 const router = express.Router();
 
 router.get('/health', (_req, res) => {
-  res.status(200).json({ success: true, message: 'API is healthy' });
+  res.status(200).json({
+    status: 'ok',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: Date.now()
+  });
 });
 
 router.use('/auth', authRoutes);

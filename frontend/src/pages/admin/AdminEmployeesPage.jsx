@@ -11,7 +11,9 @@ const initialFormState = {
   password: '',
   role: 'employee',
   department: '',
-  designation: ''
+  designation: '',
+  mobileNumber: '',
+  dob: ''
 };
 
 export default function AdminEmployeesPage() {
@@ -57,7 +59,9 @@ export default function AdminEmployeesPage() {
       password: '',
       role: employee.role || 'employee',
       department: employee.department || '',
-      designation: employee.designation || ''
+      designation: employee.designation || '',
+      mobileNumber: employee.mobileNumber || '',
+      dob: employee.dob ? new Date(employee.dob).toISOString().slice(0, 10) : ''
     });
     setShowModal(true);
   };
@@ -84,7 +88,9 @@ export default function AdminEmployeesPage() {
           name: formData.name,
           role: formData.role,
           department: formData.department,
-          designation: formData.designation
+          designation: formData.designation,
+          mobileNumber: formData.mobileNumber,
+          dob: formData.dob || null
         });
         toast.success('Employee updated');
       } else {
@@ -94,7 +100,9 @@ export default function AdminEmployeesPage() {
           password: formData.password,
           role: formData.role,
           department: formData.department,
-          designation: formData.designation
+          designation: formData.designation,
+          mobileNumber: formData.mobileNumber,
+          dob: formData.dob || null
         });
         toast.success('Employee created');
       }
@@ -150,6 +158,8 @@ export default function AdminEmployeesPage() {
               <p className="font-semibold text-slate-900">{employee.name}</p>
               <p className="text-slate-600">{employee.email}</p>
               <p className="text-slate-600">{employee.department || '-'} | {employee.designation || '-'}</p>
+              <p className="text-slate-600">Mobile: {employee.mobileNumber || '-'}</p>
+              <p className="text-slate-600">DOB: {employee.dob ? new Date(employee.dob).toLocaleDateString() : '-'}</p>
               <p className="capitalize text-slate-600">Role: {employee.role}</p>
               <p className="text-slate-500">Created: {employee.createdAt ? new Date(employee.createdAt).toLocaleDateString() : '-'}</p>
 
@@ -181,6 +191,8 @@ export default function AdminEmployeesPage() {
                 <th className="px-2 py-2">Email</th>
                 <th className="px-2 py-2">Department</th>
                 <th className="px-2 py-2">Designation</th>
+                <th className="px-2 py-2">Mobile</th>
+                <th className="px-2 py-2">DOB</th>
                 <th className="px-2 py-2">Role</th>
                 <th className="px-2 py-2">Created Date</th>
                 <th className="px-2 py-2">Actions</th>
@@ -193,10 +205,10 @@ export default function AdminEmployeesPage() {
                   <td className="px-2 py-2">{employee.email}</td>
                   <td className="px-2 py-2">{employee.department || '-'}</td>
                   <td className="px-2 py-2">{employee.designation || '-'}</td>
+                  <td className="px-2 py-2">{employee.mobileNumber || '-'}</td>
+                  <td className="px-2 py-2">{employee.dob ? new Date(employee.dob).toLocaleDateString() : '-'}</td>
                   <td className="px-2 py-2 capitalize">{employee.role}</td>
-                  <td className="px-2 py-2">
-                    {employee.createdAt ? new Date(employee.createdAt).toLocaleDateString() : '-'}
-                  </td>
+                  <td className="px-2 py-2">{employee.createdAt ? new Date(employee.createdAt).toLocaleDateString() : '-'}</td>
                   <td className="px-2 py-2">
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -225,7 +237,7 @@ export default function AdminEmployeesPage() {
 
       {showModal ? (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-xl rounded-2xl border border-white/50 bg-white p-5 shadow-xl">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/50 bg-white p-5 shadow-xl">
             <h2 className="mb-4 text-lg font-semibold text-slate-900">{heading}</h2>
 
             <form className="grid gap-3 md:grid-cols-2" onSubmit={handleSubmit}>
@@ -300,6 +312,27 @@ export default function AdminEmployeesPage() {
                 />
               </label>
 
+              <label className="text-sm text-slate-700">
+                Mobile Number
+                <input
+                  name="mobileNumber"
+                  value={formData.mobileNumber}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                />
+              </label>
+
+              <label className="text-sm text-slate-700 md:col-span-2">
+                Date of Birth
+                <input
+                  type="date"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+                />
+              </label>
+
               <div className="mt-2 flex justify-end gap-2 md:col-span-2">
                 <button
                   type="button"
@@ -323,4 +356,3 @@ export default function AdminEmployeesPage() {
     </>
   );
 }
-

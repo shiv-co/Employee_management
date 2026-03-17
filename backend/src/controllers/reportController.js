@@ -97,7 +97,7 @@ const getReports = asyncHandler(async (req, res) => {
   }
 
   const reports = await DailyReport.find(query)
-    .populate('employeeId', 'name email department')
+    .populate('employeeId', 'name')
     .sort({ date: -1, createdAt: -1 });
 
   res.status(200).json({ success: true, data: reports });
@@ -161,3 +161,4 @@ module.exports = {
   getReports,
   updateReport
 };
+

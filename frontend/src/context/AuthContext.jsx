@@ -33,6 +33,11 @@ export function AuthProvider({ children }) {
     });
   };
 
+  const setUser = (user) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    setAuthState((prev) => ({ ...prev, user }));
+  };
+
   const clearAuth = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -60,7 +65,7 @@ export function AuthProvider({ children }) {
   };
 
   const value = useMemo(
-    () => ({ ...authState, login, logout, clearAuth }),
+    () => ({ ...authState, login, logout, clearAuth, setUser }),
     [authState]
   );
 
@@ -74,4 +79,3 @@ export function useAuth() {
   }
   return context;
 }
-
