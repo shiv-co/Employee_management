@@ -33,7 +33,16 @@ const normalizeDueDate = (deadline, dueDate) => dueDate || deadline || null;
 const normalizeDueTime = (dueTime) => dueTime || '';
 
 const dueDateSort = [
-  { $addFields: { dueDateSort: { $ifNull: ['$dueDate', '$deadline'] } } },
+  {
+    $addFields: {
+      dueDateSort: {
+        $ifNull: [
+          { $ifNull: ['$dueDate', '$deadline'] },
+          new Date('9999-12-31T23:59:59.999Z')
+        ]
+      }
+    }
+  },
   { $sort: { dueDateSort: 1, createdAt: -1 } }
 ];
 
@@ -119,17 +128,12 @@ const listTasks = asyncHandler(async (req, res) => {
   if (assignedTo) query.assignedTo = assignedTo;
   if (taskType) query.taskType = taskType;
 
-  const tasks = await Task.aggregate([
-    { $match: query },
-    ...dueDateSort
-  ]);
+  const tasks = await Task.find(query)
+    .populate('assignedTo', 'name email department')
+    .populate('assignedBy', 'name email')
+    .sort({ createdAt: -1 });
 
-  const populatedTasks = await Task.populate(tasks, [
-    { path: 'assignedTo', select: 'name email department' },
-    { path: 'assignedBy', select: 'name email' }
-  ]);
-
-  res.status(200).json({ success: true, data: populatedTasks });
+  res.status(200).json({ success: true, data: tasks });
 });
 
 const updateTask = asyncHandler(async (req, res) => {
@@ -192,10 +196,26 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Task status updated', data: task });
 });
 
+const deleteTask = asyncHandler(async (req, res) => {
+  const task = await Task.findById(req.params.id);
+
+  if (!task) {
+    throw new ApiError(404, 'Task not found');
+  }
+
+  await task.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    message: 'Task deleted successfully'
+  });
+});
+
 module.exports = {
   createTask,
   listMyTasks,
   listTasks,
   updateTask,
-  updateTaskStatus
+  updateTaskStatus,
+  deleteTask
 };
