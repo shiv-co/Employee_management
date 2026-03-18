@@ -357,6 +357,17 @@ const reviewCorrectionRequest = asyncHandler(async (req, res) => {
     );
   }
 
+  const { createNotification } = require('../utils/notification');
+  await createNotification({
+    userId: correction.employeeId,
+    type: 'attendance',
+    message:
+      correction.requestType === 'manual-entry'
+        ? `Your manual attendance request has been ${status}`
+        : `Your attendance correction has been ${status}`,
+    meta: { correctionId: correction._id, status, requestType: correction.requestType }
+  });
+
   res.status(200).json({ success: true, message: `Correction request ${status}`, data: correction });
 });
 

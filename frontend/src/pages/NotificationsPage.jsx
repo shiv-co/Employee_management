@@ -1,20 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import api from '../api/client';
 import PageCard from '../components/PageCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useNotifications } from '../context/NotificationContext';
 
 export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const { notifications, refreshNotifications, markAsRead: markNotificationRead } = useNotifications();
 
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const query = showUnreadOnly ? '?unreadOnly=true' : '';
-      const response = await api.get(`/v1/notifications/me${query}`);
-      setNotifications(response.data?.data || []);
+      await refreshNotifications({ silent: true });
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to load notifications');
     } finally {
@@ -26,26 +24,21 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, [showUnreadOnly]);
 
+  const visibleNotifications = useMemo(
+    () => (showUnreadOnly ? notifications.filter((item) => !item.isRead) : notifications),
+    [notifications, showUnreadOnly]
+  );
+
   const stats = useMemo(() => {
     const unread = notifications.filter((item) => !item.isRead).length;
     return { total: notifications.length, unread };
   }, [notifications]);
 
-  const markAsRead = async (id) => {
+  const handleMarkAsRead = async (id) => {
     try {
-      await api.patch(`/v1/notifications/${id}/read`);
-      setNotifications((prev) => prev.map((item) => (item._id === id ? { ...item, isRead: true } : item)));
+      await markNotificationRead(id);
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Unable to mark as read');
-    }
-  };
-
-  const deleteNotification = async (id) => {
-    try {
-      await api.delete(`/v1/notifications/${id}`);
-      setNotifications((prev) => prev.filter((item) => item._id !== id));
-    } catch (apiError) {
-      toast.error(apiError.response?.data?.message || 'Unable to delete notification');
     }
   };
 
@@ -66,7 +59,7 @@ export default function NotificationsPage() {
 
       <PageCard title={`Total: ${stats.total} | Unread: ${stats.unread}`}>
         <div className="space-y-2">
-          {notifications.map((notification) => (
+          {visibleNotifications.map((notification) => (
             <article key={notification._id} className="rounded-lg border border-slate-200 p-3 text-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -82,29 +75,18 @@ export default function NotificationsPage() {
                 {!notification.isRead ? (
                   <button
                     type="button"
-                    onClick={() => markAsRead(notification._id)}
+                    onClick={() => handleMarkAsRead(notification._id)}
                     className="rounded-md border border-blue-300 px-2 py-1 text-xs text-blue-700"
                   >
                     Mark as Read
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => deleteNotification(notification._id)}
-                  className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700"
-                >
-                  Delete
-                </button>
               </div>
             </article>
           ))}
-          {!notifications.length ? <p className="text-sm text-slate-500">No notifications found.</p> : null}
+          {!visibleNotifications.length ? <p className="text-sm text-slate-500">No notifications found.</p> : null}
         </div>
       </PageCard>
     </>
   );
 }
-
-
-
-

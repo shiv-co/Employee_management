@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import {
   FiBell,
@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/client';
+import { useNotifications } from '../context/NotificationContext';
 
 const navClass = ({ isActive }) =>
   `flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium transition ${
@@ -79,38 +79,11 @@ function SidebarContent({ isAdmin, onNavigate }) {
 
 export default function AppLayout() {
   const { user, logout, isAuthenticated } = useAuth();
+  const { notifications, unreadCount, refreshNotifications, markAsRead, markAllRead } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
   const isAdmin = user?.role === 'admin';
-
-  useEffect(() => {
-    if (!isAuthenticated) return undefined;
-
-    let active = true;
-
-    const pollNotifications = async () => {
-      try {
-        const response = await api.get('/v1/notifications/me?unreadOnly=true');
-        const unread = response.data?.data || [];
-        if (!unread.length || !active) return;
-
-        unread.forEach((item) => {
-          toast(item.message, { icon: '??' });
-        });
-
-        await api.patch('/v1/notifications/me/read-all');
-      } catch (_error) {
-        // Silent polling failures to avoid noisy UX.
-      }
-    };
-
-    pollNotifications();
-    const notificationInterval = setInterval(pollNotifications, 30000);
-
-    return () => {
-      active = false;
-      clearInterval(notificationInterval);
-    };
-  }, [isAuthenticated]);
+  const latestNotifications = useMemo(() => notifications.slice(0, 6), [notifications]);
 
   useEffect(() => {
     if (!isAuthenticated || isAdmin) return undefined;
@@ -139,6 +112,12 @@ export default function AppLayout() {
     return () => clearInterval(reminderInterval);
   }, [isAdmin, isAuthenticated]);
 
+  useEffect(() => {
+    if (bellOpen) {
+      refreshNotifications({ silent: true });
+    }
+  }, [bellOpen]);
+
   return (
     <div className="min-h-screen bg-app-gradient">
       <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 backdrop-blur">
@@ -158,6 +137,73 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setBellOpen((prev) => !prev)}
+                className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
+                aria-label="Notifications"
+              >
+                <FiBell className="h-5 w-5" />
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {unreadCount}
+                  </span>
+                ) : null}
+              </button>
+
+              {bellOpen ? (
+                <div className="absolute right-0 top-12 z-30 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="font-semibold text-slate-900">Notifications</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={markAllRead}
+                        className="text-xs font-medium text-blue-700 hover:text-blue-900"
+                      >
+                        Mark all read
+                      </button>
+                      <Link
+                        to={isAdmin ? '/admin/notifications' : '/employee/notifications'}
+                        onClick={() => setBellOpen(false)}
+                        className="text-xs font-medium text-slate-700 hover:text-slate-900"
+                      >
+                        View all
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 space-y-2 overflow-y-auto">
+                    {latestNotifications.map((notification) => (
+                      <button
+                        key={notification._id}
+                        type="button"
+                        onClick={async () => {
+                          if (!notification.isRead) {
+                            await markAsRead(notification._id);
+                          }
+                          setBellOpen(false);
+                        }}
+                        className="w-full rounded-xl border border-slate-200 p-3 text-left text-sm hover:bg-slate-50"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-slate-800">{notification.message}</p>
+                            <p className="mt-1 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
+                          </div>
+                          {!notification.isRead ? (
+                            <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
+                          ) : null}
+                        </div>
+                      </button>
+                    ))}
+                    {!latestNotifications.length ? <p className="text-sm text-slate-500">No notifications yet.</p> : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 sm:inline-flex">
               {user?.name}
             </span>

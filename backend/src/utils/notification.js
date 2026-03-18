@@ -1,8 +1,11 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { emitNotification } = require('./socket');
 
 const createNotification = async ({ userId, type, message, meta = {} }) => {
-  await Notification.create({ userId, type, message, meta });
+  const notification = await Notification.create({ userId, type, message, meta });
+  emitNotification(String(userId), notification);
+  return notification;
 };
 
 const notifyAdmins = async ({ type, message, meta = {} }) => {
@@ -16,7 +19,10 @@ const notifyAdmins = async ({ type, message, meta = {} }) => {
     meta
   }));
 
-  await Notification.insertMany(payload);
+  const notifications = await Notification.insertMany(payload);
+  notifications.forEach((notification) => {
+    emitNotification(String(notification.userId), notification);
+  });
 };
 
 module.exports = {
