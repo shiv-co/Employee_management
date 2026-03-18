@@ -40,6 +40,18 @@ export default function AdminDashboardPage() {
   const [reports, setReports] = useState([]);
   const [recentTasks, setRecentTasks] = useState([]);
   const [trendView, setTrendView] = useState('weekly');
+  const [attendanceDetails, setAttendanceDetails] = useState({ present: [], absent: [] });
+  const [attendanceModalType, setAttendanceModalType] = useState('');
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+
+  const formatISTTime = (value) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -112,6 +124,19 @@ export default function AdminDashboardPage() {
 
   if (loading) return <LoadingSpinner text="Loading admin dashboard..." />;
 
+  const openAttendanceModal = async (type) => {
+    setAttendanceLoading(true);
+    try {
+      const response = await api.get('/v1/attendance/today');
+      setAttendanceDetails(response.data?.data || { present: [], absent: [] });
+      setAttendanceModalType(type);
+    } catch (apiError) {
+      setError(apiError.response?.data?.message || 'Failed to load attendance details');
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
   return (
     <>
       <h1 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h1>
@@ -119,8 +144,12 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Total Employees" value={summary.totalEmployees} tone="slate" icon={FiUsers} />
-        <StatCard label="Present Today" value={summary.presentToday} tone="emerald" icon={FiUserCheck} />
-        <StatCard label="Absent Today" value={summary.absentToday} tone="rose" icon={FiUserX} />
+        <button type="button" onClick={() => openAttendanceModal('present')} className="text-left">
+          <StatCard label="Present Today" value={summary.presentToday} tone="emerald" icon={FiUserCheck} />
+        </button>
+        <button type="button" onClick={() => openAttendanceModal('absent')} className="text-left">
+          <StatCard label="Absent Today" value={summary.absentToday} tone="rose" icon={FiUserX} />
+        </button>
         <StatCard label="Tasks Completed" value={summary.tasksCompletedToday} tone="blue" icon={FiCheckCircle} />
         <StatCard label="Pending Tasks" value={summary.pendingTasks} tone="amber" icon={FiClock} />
       </div>
@@ -200,6 +229,44 @@ export default function AdminDashboardPage() {
           </div>
         </PageCard>
       </div>
+
+      {attendanceModalType ? (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/50 bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {attendanceModalType === 'present' ? 'Present Today' : 'Absent Today'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setAttendanceModalType('')}
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+              >
+                Close
+              </button>
+            </div>
+
+            {attendanceLoading ? (
+              <LoadingSpinner text="Loading attendance details..." />
+            ) : (
+              <div className="space-y-3">
+                {(attendanceModalType === 'present' ? attendanceDetails.present : attendanceDetails.absent).map((employee) => (
+                  <article key={employee._id} className="rounded-lg border border-slate-200 p-3 text-sm">
+                    <p className="font-medium text-slate-800">{employee.name}</p>
+                    <p className="text-slate-600">Department: {employee.department || '-'}</p>
+                    {attendanceModalType === 'present' ? (
+                      <p className="text-slate-500">Check-in Time: {formatISTTime(employee.checkInTime)}</p>
+                    ) : null}
+                  </article>
+                ))}
+                {!(attendanceModalType === 'present' ? attendanceDetails.present : attendanceDetails.absent).length ? (
+                  <p className="text-sm text-slate-500">No employees found.</p>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

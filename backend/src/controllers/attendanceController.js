@@ -1,17 +1,54 @@
 const Attendance = require('../models/Attendance');
 const AttendanceCorrection = require('../models/AttendanceCorrection');
+const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { notifyAdmins } = require('../utils/notification');
 
-const getToday = () => new Date().toISOString().slice(0, 10);
+const IST_TIME_ZONE = 'Asia/Kolkata';
+
+const getISTParts = (date = new Date()) => {
+  const formatted = new Intl.DateTimeFormat('en-GB', {
+    timeZone: IST_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(date);
+
+  const partMap = formatted.reduce((acc, part) => {
+    if (part.type !== 'literal') {
+      acc[part.type] = part.value;
+    }
+    return acc;
+  }, {});
+
+  return {
+    date: `${partMap.year}-${partMap.month}-${partMap.day}`,
+    hour: Number(partMap.hour || 0),
+    minute: Number(partMap.minute || 0)
+  };
+};
+
+const getToday = () => getISTParts().date;
+
+const parseAttendanceDateTime = (date, value) => {
+  if (!value) return null;
+
+  const normalized = String(value).trim();
+  const timePart = normalized.includes('T') ? normalized.split('T')[1].slice(0, 5) : normalized.slice(0, 5);
+  const [hours = '00', minutes = '00'] = timePart.split(':');
+
+  return new Date(`${date}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00+05:30`);
+};
 
 const detectLate = (dateValue) => {
   if (!dateValue) return false;
-  const checkInDate = new Date(dateValue);
-  const hh = checkInDate.getHours();
-  const mm = checkInDate.getMinutes();
-  return hh > 9 || (hh === 9 && mm > 45);
+  const { hour, minute } = getISTParts(new Date(dateValue));
+  return hour > 9 || (hour === 9 && minute > 45);
 };
 
 const deriveStatus = (hasCheckIn, isLate) => {
@@ -64,34 +101,53 @@ const checkOut = asyncHandler(async (req, res) => {
 });
 
 const submitManualAttendanceEntry = asyncHandler(async (req, res) => {
-  const { date, checkInTime, checkOutTime, note = '' } = req.body;
-  if (!date || !checkInTime || !checkOutTime) {
-    throw new ApiError(400, 'date, checkInTime and checkOutTime are required');
+  const { date, checkInTime, checkOutTime, checkIn, checkOut, note = '' } = req.body;
+  if (!date) {
+    throw new ApiError(400, 'date is required');
   }
+
+  if (date !== getToday()) {
+    throw new ApiError(400, 'Manual attendance allowed only for today');
+  }
+
+  const normalizedCheckIn = checkIn || checkInTime || null;
+  const normalizedCheckOut = checkOut || checkOutTime || null;
+
+  if (!normalizedCheckIn && !normalizedCheckOut) {
+    throw new ApiError(400, 'At least one of checkIn or checkOut is required');
+  }
+
+  const parsedCheckIn = parseAttendanceDateTime(date, normalizedCheckIn);
+  const parsedCheckOut = parseAttendanceDateTime(date, normalizedCheckOut);
 
   const correction = await AttendanceCorrection.create({
     employeeId: req.user._id,
     date,
     requestType: 'manual-entry',
-    correctCheckIn: new Date(checkInTime),
-    correctCheckOut: new Date(checkOutTime),
+    correctCheckIn: parsedCheckIn,
+    correctCheckOut: parsedCheckOut,
     note,
     status: 'pending'
   });
 
-  await Attendance.findOneAndUpdate(
-    { employeeId: req.user._id, date },
-    {
-      $set: {
-        checkInTime: new Date(checkInTime),
-        checkOutTime: new Date(checkOutTime),
-        status: 'Manual Entry',
-        entrySource: 'manual',
-        notes: note
-      }
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  const attendance = await Attendance.findOne({ employeeId: req.user._id, date });
+  const nextAttendance = attendance || new Attendance({ employeeId: req.user._id, date });
+
+  if (parsedCheckIn) {
+    nextAttendance.checkInTime = parsedCheckIn;
+  }
+  if (parsedCheckOut) {
+    nextAttendance.checkOutTime = parsedCheckOut;
+  }
+  nextAttendance.status = 'Manual Entry';
+  nextAttendance.entrySource = 'manual';
+  nextAttendance.notes = note;
+  nextAttendance.isLate = detectLate(nextAttendance.checkInTime);
+  nextAttendance.totalWorkMinutes =
+    nextAttendance.checkInTime && nextAttendance.checkOutTime
+      ? Math.max(0, Math.round((nextAttendance.checkOutTime - nextAttendance.checkInTime) / (1000 * 60)))
+      : 0;
+  await nextAttendance.save();
 
   await notifyAdmins({
     type: 'manual_attendance_requested',
@@ -178,12 +234,15 @@ const submitCorrectionRequest = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'date is required');
   }
 
+  const parsedCheckIn = parseAttendanceDateTime(date, correctCheckIn);
+  const parsedCheckOut = parseAttendanceDateTime(date, correctCheckOut);
+
   const correction = await AttendanceCorrection.create({
     employeeId: req.user._id,
     date,
     requestType: 'correction',
-    correctCheckIn,
-    correctCheckOut,
+    correctCheckIn: parsedCheckIn,
+    correctCheckOut: parsedCheckOut,
     note,
     status: 'pending'
   });
@@ -209,6 +268,45 @@ const getCorrectionRequests = asyncHandler(async (_req, res) => {
     .sort({ createdAt: -1 });
 
   res.status(200).json({ success: true, data: corrections });
+});
+
+const getTodayAttendanceDetails = asyncHandler(async (_req, res) => {
+  const today = getToday();
+
+  const presentRecords = await Attendance.find({ date: today, checkInTime: { $ne: null } })
+    .populate('employeeId', 'name email department')
+    .sort({ checkInTime: 1 });
+
+  const presentIds = presentRecords
+    .map((record) => record.employeeId?._id)
+    .filter(Boolean);
+
+  const absentEmployees = await User.find({
+    role: 'employee',
+    isActive: true,
+    _id: { $nin: presentIds }
+  })
+    .select('name email department')
+    .sort({ name: 1 });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      present: presentRecords.map((record) => ({
+        _id: record.employeeId?._id || record._id,
+        name: record.employeeId?.name || 'Employee',
+        email: record.employeeId?.email || '',
+        department: record.employeeId?.department || '',
+        checkInTime: record.checkInTime
+      })),
+      absent: absentEmployees.map((employee) => ({
+        _id: employee._id,
+        name: employee.name,
+        email: employee.email,
+        department: employee.department || ''
+      }))
+    }
+  });
 });
 
 const reviewCorrectionRequest = asyncHandler(async (req, res) => {
@@ -269,6 +367,7 @@ module.exports = {
   submitManualAttendanceEntry,
   getMyAttendance,
   getAttendance,
+  getTodayAttendanceDetails,
   getAttendanceSummary,
   submitCorrectionRequest,
   getMyCorrectionRequests,

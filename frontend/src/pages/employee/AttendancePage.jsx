@@ -18,11 +18,20 @@ const correctionInitialState = {
 
 const manualInitialState = {
   date: today,
-  checkInTime: '',
-  checkOutTime: '',
+  checkIn: '',
+  checkOut: '',
   note: ''
 };
-// function to convert "HH:MM" to "HH:MM:SS" format
+
+const formatISTTime = (value) => {
+  if (!value) return '-';
+  return new Date(value).toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
 export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -141,10 +150,8 @@ export default function AttendancePage() {
 
       <PageCard title="Mark Today (Instant)">
         <div className="mb-4 grid gap-2 text-sm text-slate-700 md:grid-cols-3">
-          <p>Check-in: {todayRecord?.checkInTime ? new Date(todayRecord.checkInTime).toLocaleTimeString() : 'Not yet'}</p>
-          <p>
-            Check-out: {todayRecord?.checkOutTime ? new Date(todayRecord.checkOutTime).toLocaleTimeString() : 'Not yet'}
-          </p>
+          <p>Check-in: {todayRecord?.checkInTime ? formatISTTime(todayRecord.checkInTime) : 'Not yet'}</p>
+          <p>Check-out: {todayRecord?.checkOutTime ? formatISTTime(todayRecord.checkOutTime) : 'Not yet'}</p>
           <p>Status: {todayRecord?.status || 'Absent'}</p>
         </div>
 
@@ -180,27 +187,38 @@ export default function AttendancePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <PageCard title="Manual Time Entry">
           <form className="space-y-3" onSubmit={submitManualEntry}>
-            <input
-              type="date"
-              value={manualForm.date}
-              onChange={(event) => setManualForm((prev) => ({ ...prev, date: event.target.value }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-              required
-            />
-            <input
-              type="datetime-local"
-              value={manualForm.checkInTime}
-              onChange={(event) => setManualForm((prev) => ({ ...prev, checkInTime: event.target.value }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-              required
-            />
-            <input
-              type="datetime-local"
-              value={manualForm.checkOutTime}
-              onChange={(event) => setManualForm((prev) => ({ ...prev, checkOutTime: event.target.value }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-              required
-            />
+            <label className="block text-sm text-slate-700">
+              Date
+              <input
+                type="date"
+                min={today}
+                max={today}
+                value={manualForm.date}
+                onChange={(event) => setManualForm((prev) => ({ ...prev, date: event.target.value }))}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                required
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm text-slate-700">
+                Check-in Time
+                <input
+                  type="time"
+                  value={manualForm.checkIn}
+                  onChange={(event) => setManualForm((prev) => ({ ...prev, checkIn: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+              <label className="block text-sm text-slate-700">
+                Check-out Time
+                <input
+                  type="time"
+                  value={manualForm.checkOut}
+                  onChange={(event) => setManualForm((prev) => ({ ...prev, checkOut: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+            </div>
             <textarea
               rows="3"
               value={manualForm.note}
@@ -216,25 +234,36 @@ export default function AttendancePage() {
 
         <PageCard title="Attendance Correction Request">
           <form className="space-y-3" onSubmit={submitCorrection}>
-            <input
-              type="date"
-              value={correctionForm.date}
-              onChange={(event) => setCorrectionForm((prev) => ({ ...prev, date: event.target.value }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-              required
-            />
-            <input
-              type="datetime-local"
-              value={correctionForm.correctCheckIn}
-              onChange={(event) => setCorrectionForm((prev) => ({ ...prev, correctCheckIn: event.target.value }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <input
-              type="datetime-local"
-              value={correctionForm.correctCheckOut}
-              onChange={(event) => setCorrectionForm((prev) => ({ ...prev, correctCheckOut: event.target.value }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-            />
+            <label className="block text-sm text-slate-700">
+              Date
+              <input
+                type="date"
+                value={correctionForm.date}
+                onChange={(event) => setCorrectionForm((prev) => ({ ...prev, date: event.target.value }))}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                required
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm text-slate-700">
+                Check-in Time
+                <input
+                  type="time"
+                  value={correctionForm.correctCheckIn}
+                  onChange={(event) => setCorrectionForm((prev) => ({ ...prev, correctCheckIn: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+              <label className="block text-sm text-slate-700">
+                Check-out Time
+                <input
+                  type="time"
+                  value={correctionForm.correctCheckOut}
+                  onChange={(event) => setCorrectionForm((prev) => ({ ...prev, correctCheckOut: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </label>
+            </div>
             <textarea
               rows="3"
               value={correctionForm.note}
@@ -256,6 +285,8 @@ export default function AttendancePage() {
               <p className="font-medium text-slate-800">{item.date}</p>
               <p className="capitalize text-slate-600">Type: {item.requestType}</p>
               <p className="capitalize text-slate-600">Status: {item.status}</p>
+              <p className="text-slate-600">Check-in Time: {formatISTTime(item.correctCheckIn)}</p>
+              <p className="text-slate-600">Check-out Time: {formatISTTime(item.correctCheckOut)}</p>
               <p className="text-slate-500">{item.note || '-'}</p>
             </article>
           ))}

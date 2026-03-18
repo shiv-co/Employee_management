@@ -7,6 +7,14 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import PageCard from '../../components/PageCard';
 
 const formatCsvValue = (value) => `"${String(value || '').replace(/"/g, '""')}"`;
+const formatISTTime = (value) =>
+  value
+    ? new Date(value).toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+    : '';
 
 export default function AdminAttendancePage() {
   const [loading, setLoading] = useState(true);
@@ -71,8 +79,8 @@ export default function AdminAttendancePage() {
         [
           formatCsvValue(record.employeeId?.name || ''),
           formatCsvValue(record.date || ''),
-          formatCsvValue(record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString() : ''),
-          formatCsvValue(record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString() : ''),
+          formatCsvValue(formatISTTime(record.checkInTime)),
+          formatCsvValue(formatISTTime(record.checkOutTime)),
           formatCsvValue(record.status || ''),
           formatCsvValue(record.isLate ? 'Late' : 'On Time'),
           formatCsvValue(record.notes || '')
@@ -150,8 +158,8 @@ export default function AdminAttendancePage() {
             <article key={record._id} className="rounded-lg border border-slate-200 p-3 text-sm">
               <p className="font-semibold text-slate-800">{record.employeeId?.name || '-'}</p>
               <p>Date: {record.date}</p>
-              <p>Check In: {record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString() : '-'}</p>
-              <p>Check Out: {record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString() : '-'}</p>
+              <p>Check In: {formatISTTime(record.checkInTime) || '-'}</p>
+              <p>Check Out: {formatISTTime(record.checkOutTime) || '-'}</p>
               <p>Status: {record.status}</p>
               <p>Late: {record.isLate ? 'Yes' : 'No'}</p>
               <p>Notes: {record.notes || '-'}</p>
@@ -177,8 +185,8 @@ export default function AdminAttendancePage() {
                 <tr key={record._id} className="border-t border-slate-200">
                   <td className="px-2 py-2">{record.employeeId?.name || '-'}</td>
                   <td className="px-2 py-2">{record.date}</td>
-                  <td className="px-2 py-2">{record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString() : '-'}</td>
-                  <td className="px-2 py-2">{record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString() : '-'}</td>
+                  <td className="px-2 py-2">{formatISTTime(record.checkInTime) || '-'}</td>
+                  <td className="px-2 py-2">{formatISTTime(record.checkOutTime) || '-'}</td>
                   <td className="px-2 py-2">{record.status}</td>
                   <td className="px-2 py-2">{record.isLate ? 'Late' : 'On Time'}</td>
                   <td className="px-2 py-2">{record.notes || '-'}</td>

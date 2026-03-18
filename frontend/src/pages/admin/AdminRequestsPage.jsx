@@ -4,6 +4,15 @@ import api from '../../api/client';
 import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
+const formatISTTime = (value) => {
+  if (!value) return '-';
+  return new Date(value).toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
 export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [leaveRequests, setLeaveRequests] = useState([]);
@@ -62,6 +71,8 @@ export default function AdminRequestsPage() {
               <article key={request._id} className="rounded-lg border border-slate-200 p-3 text-sm">
                 <p className="font-medium text-slate-800">{request.employeeId?.name || 'Employee'}</p>
                 <p className="text-slate-600">Date: {request.date}</p>
+                <p className="text-slate-600">Check-in Time: {formatISTTime(request.correctCheckIn)}</p>
+                <p className="text-slate-600">Check-out Time: {formatISTTime(request.correctCheckOut)}</p>
                 <p className="text-slate-600">Note: {request.note || '-'}</p>
                 <p className="capitalize text-slate-600">Status: {request.status}</p>
 

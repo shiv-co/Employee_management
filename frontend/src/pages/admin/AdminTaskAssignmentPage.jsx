@@ -15,6 +15,7 @@ const initialForm = {
 
 const initialEditForm = {
   id: '',
+  assignedTo: '',
   title: '',
   description: '',
   priority: 'Medium',
@@ -42,6 +43,7 @@ export default function AdminTaskAssignmentPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
+  const [expandedTaskId, setExpandedTaskId] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -95,6 +97,7 @@ export default function AdminTaskAssignmentPage() {
   const openEditModal = (task) => {
     setEditForm({
       id: task._id,
+      assignedTo: task.assignedTo?._id || task.assignedTo?.id || '',
       title: task.title || '',
       description: task.description || '',
       priority: task.priority || 'Medium',
@@ -108,6 +111,7 @@ export default function AdminTaskAssignmentPage() {
     event.preventDefault();
     try {
       await api.put(`/v1/tasks/${editForm.id}`, {
+        assignedTo: editForm.assignedTo,
         title: editForm.title,
         description: editForm.description,
         priority: editForm.priority,
@@ -249,13 +253,23 @@ export default function AdminTaskAssignmentPage() {
           {filteredTasks.map((task) => (
             <article key={task._id} className="rounded-lg border border-slate-200 p-4 text-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedTaskId((prev) => (prev === task._id ? '' : task._id))}
+                  className="flex-1 text-left"
+                >
                   <p className="font-medium text-slate-800">Task: {task.title}</p>
                   <p className="text-slate-600">Assigned To: {task.assignedTo?.name || '-'}</p>
-                  <p className="text-slate-600">Status: {task.status || '-'}</p>
-                  <p className="text-slate-500">Assigned At: {formatDateTime(task.createdAt)}</p>
-                  <p className="text-slate-500">Deadline: {task.deadline ? formatDateTime(task.deadline) : '-'}</p>
-                </div>
+                  {expandedTaskId === task._id ? (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-slate-600">Description: {task.description || '-'}</p>
+                      <p className="text-slate-600">Priority: {task.priority || '-'}</p>
+                      <p className="text-slate-600">Status: {task.status || '-'}</p>
+                      <p className="text-slate-500">Assigned At: {formatDateTime(task.createdAt)}</p>
+                      <p className="text-slate-500">Deadline: {task.deadline ? formatDateTime(task.deadline) : '-'}</p>
+                    </div>
+                  ) : null}
+                </button>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -312,6 +326,22 @@ export default function AdminTaskAssignmentPage() {
                   <option>Low</option>
                   <option>Medium</option>
                   <option>High</option>
+                </select>
+              </label>
+              <label className="text-sm text-slate-700">
+                Assigned To
+                <select
+                  value={editForm.assignedTo}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, assignedTo: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                  required
+                >
+                  <option value="">Select employee</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id || employee._id} value={employee.id || employee._id}>
+                      {employee.name} ({employee.department || 'N/A'})
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="text-sm text-slate-700">
