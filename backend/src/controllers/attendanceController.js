@@ -4,6 +4,7 @@ const User = require('../models/User');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/ApiError');
 const { notifyAdmins } = require('../utils/notification');
+const { getOrCreateSettings } = require('./settingsController');
 
 const IST_TIME_ZONE = 'Asia/Kolkata';
 
@@ -45,12 +46,20 @@ const parseAttendanceDateTime = (date, value) => {
   return new Date(`${date}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00+05:30`);
 };
 
+const parseTimeString = (value) => {
+  const [hours = '0', minutes = '0'] = String(value || '').split(':');
+  return {
+    hour: Number(hours),
+    minute: Number(minutes)
+  };
+};
 
-
-const detectLate = (dateValue) => {
+const detectLate = async (dateValue) => {
   if (!dateValue) return false;
+  const settings = await getOrCreateSettings();
+  const lateThreshold = parseTimeString(settings.lateAfter);
   const { hour, minute } = getISTParts(new Date(dateValue));
-  return hour > 10 || (hour === 10 && minute > 30);
+  return hour > lateThreshold.hour || (hour === lateThreshold.hour && minute > lateThreshold.minute);
 };
 
 const deriveStatus = (hasCheckIn, isLate) => {
@@ -72,7 +81,7 @@ const checkIn = asyncHandler(async (req, res) => {
   }
 
   attendance.checkInTime = new Date();
-  attendance.isLate = detectLate(attendance.checkInTime);
+  attendance.isLate = await detectLate(attendance.checkInTime);
   attendance.status = deriveStatus(true, attendance.isLate);
   attendance.entrySource = 'instant';
   await attendance.save();
@@ -144,7 +153,7 @@ const submitManualAttendanceEntry = asyncHandler(async (req, res) => {
   nextAttendance.status = 'Manual Entry';
   nextAttendance.entrySource = 'manual';
   nextAttendance.notes = note;
-  nextAttendance.isLate = detectLate(nextAttendance.checkInTime);
+  nextAttendance.isLate = await detectLate(nextAttendance.checkInTime);
   nextAttendance.totalWorkMinutes =
     nextAttendance.checkInTime && nextAttendance.checkOutTime
       ? Math.max(0, Math.round((nextAttendance.checkOutTime - nextAttendance.checkInTime) / (1000 * 60)))
@@ -341,7 +350,7 @@ const reviewCorrectionRequest = asyncHandler(async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    attendance.isLate = detectLate(attendance.checkInTime);
+    attendance.isLate = await detectLate(attendance.checkInTime);
     attendance.status = deriveStatus(Boolean(attendance.checkInTime), attendance.isLate);
     if (attendance.checkInTime && attendance.checkOutTime) {
       attendance.totalWorkMinutes = Math.max(
@@ -387,4 +396,3 @@ module.exports = {
   getCorrectionRequests,
   reviewCorrectionRequest
 };
-

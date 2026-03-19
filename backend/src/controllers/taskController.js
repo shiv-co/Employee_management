@@ -36,15 +36,19 @@ const normalizeDueTime = (dueTime) => dueTime || '';
 const dueDateSort = [
   {
     $addFields: {
-      dueDateSort: {
-        $ifNull: [
-          { $ifNull: ['$dueDate', '$deadline'] },
-          new Date('9999-12-31T23:59:59.999Z')
-        ]
+      statusSort: {
+        $switch: {
+          branches: [
+            { case: { $in: ['$status', ['Pending', 'todo']] }, then: 1 },
+            { case: { $in: ['$status', ['In Progress', 'in-progress']] }, then: 2 },
+            { case: { $in: ['$status', ['Completed', 'done']] }, then: 3 }
+          ],
+          default: 99
+        }
       }
     }
   },
-  { $sort: { dueDateSort: 1, createdAt: -1 } }
+  { $sort: { statusSort: 1, createdAt: -1 } }
 ];
 
 const applyTaskUpdates = (task, updates, isAdmin) => {

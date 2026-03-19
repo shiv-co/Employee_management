@@ -17,6 +17,7 @@ const AdminEmployeesPage = lazy(() => import('./pages/admin/AdminEmployeesPage')
 const AdminRequestsPage = lazy(() => import('./pages/admin/AdminRequestsPage'));
 const AdminTaskAssignmentPage = lazy(() => import('./pages/admin/AdminTaskAssignmentPage'));
 const AdminAttendancePage = lazy(() => import('./pages/admin/AdminAttendancePage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 function DefaultRoute() {
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="requests" element={<AdminRequestsPage />} />
           <Route path="tasks" element={<AdminTaskAssignmentPage />} />
           <Route path="attendance" element={<AdminAttendancePage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
         </Route>
 

@@ -9,6 +9,7 @@ const dashboardRoutes = require('./dashboardRoutes');
 const leaveRoutes = require('./leaveRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const todoRoutes = require('./todoRoutes');
+const settingsRoutes = require('./settingsRoutes');
 
 const router = express.Router();
 
@@ -29,6 +30,7 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/leaves', leaveRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/todos', todoRoutes);
+router.use('/settings', settingsRoutes);
 
 module.exports = router;
 

@@ -36,6 +36,12 @@ const progressValue = {
   Completed: 100
 };
 
+const statusOrder = {
+  Pending: 1,
+  'In Progress': 2,
+  Completed: 3
+};
+
 const personalInitial = {
   title: '',
   description: '',
@@ -133,7 +139,15 @@ export default function TaskListPage() {
 
           return statusMatch && priorityMatch && typeMatch && searchMatch;
         })
-        .sort((a, b) => getTaskDueTimestamp(a) - getTaskDueTimestamp(b)),
+        .sort((a, b) => {
+          const orderDiff = (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+          if (orderDiff !== 0) return orderDiff;
+
+          const createdAtDiff = new Date(b.createdAt) - new Date(a.createdAt);
+          if (createdAtDiff !== 0) return createdAtDiff;
+
+          return getTaskDueTimestamp(a) - getTaskDueTimestamp(b);
+        }),
     [normalizedTasks, priorityFilter, searchText, statusFilter, typeFilter]
   );
 

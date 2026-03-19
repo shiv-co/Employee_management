@@ -7,6 +7,7 @@ import {
   FiFileText,
   FiGrid,
   FiMenu,
+  FiSettings,
   FiUser,
   FiUsers,
   FiX
@@ -67,6 +68,9 @@ function SidebarContent({ isAdmin, onNavigate }) {
           </NavLink>
           <NavLink to="/admin/requests" className={navClass} onClick={onNavigate}>
             <FiFileText /> Requests
+          </NavLink>
+          <NavLink to="/admin/settings" className={navClass} onClick={onNavigate}>
+            <FiSettings /> Settings
           </NavLink>
           <NavLink to="/admin/notifications" className={navClass} onClick={onNavigate}>
             <FiBell /> Notifications

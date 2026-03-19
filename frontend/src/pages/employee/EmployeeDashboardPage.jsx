@@ -19,6 +19,23 @@ const statusLabel = {
   done: 'Completed'
 };
 
+const statusOrder = {
+  Pending: 1,
+  'In Progress': 2,
+  Completed: 3
+};
+
+const normalizeStatus = (status) => statusLabel[status] || status;
+
+const sortTasksByPriority = (tasks) =>
+  [...tasks].sort((a, b) => {
+    const leftStatus = normalizeStatus(a.status);
+    const rightStatus = normalizeStatus(b.status);
+    const orderDiff = (statusOrder[leftStatus] || 99) - (statusOrder[rightStatus] || 99);
+    if (orderDiff !== 0) return orderDiff;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
 export default function EmployeeDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -50,12 +67,17 @@ export default function EmployeeDashboardPage() {
   }, []);
 
   const summary = useMemo(() => {
-    const assignedTasks = tasks.filter((task) => task.taskType === 'assigned');
-    const personalTasks = tasks.filter((task) => task.taskType === 'personal');
+    const assignedTasks = sortTasksByPriority(tasks.filter((task) => task.taskType === 'assigned'));
+    const personalTasks = sortTasksByPriority(tasks.filter((task) => task.taskType === 'personal'));
     const completed = tasks.filter((task) => ['Completed', 'done'].includes(task.status)).length;
     const completion = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
+    const groupedAssignedTasks = {
+      Pending: assignedTasks.filter((task) => normalizeStatus(task.status) === 'Pending'),
+      'In Progress': assignedTasks.filter((task) => normalizeStatus(task.status) === 'In Progress'),
+      Completed: assignedTasks.filter((task) => normalizeStatus(task.status) === 'Completed')
+    };
 
-    return { assignedTasks, personalTasks, completed, completion };
+    return { assignedTasks, personalTasks, completed, completion, groupedAssignedTasks };
   }, [tasks]);
 
   const handleAttendanceAction = async (type) => {
@@ -132,15 +154,23 @@ export default function EmployeeDashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <PageCard title="Today's Assigned Tasks">
-          <div className="space-y-2">
-            {summary.assignedTasks.slice(0, 5).map((task) => (
-              <article key={task._id} className="rounded-lg border border-slate-200 p-3 text-sm">
-                <p className="font-medium text-slate-800">{task.title}</p>
-                <p className="text-slate-500">{statusLabel[task.status] || task.status}</p>
-              </article>
+        <PageCard title="Assigned Tasks by Status">
+          <div className="space-y-4">
+            {Object.entries(summary.groupedAssignedTasks).map(([groupLabel, items]) => (
+              <div key={groupLabel}>
+                <p className="mb-2 text-sm font-semibold text-slate-700">{groupLabel} Tasks</p>
+                <div className="space-y-2">
+                  {items.slice(0, 5).map((task) => (
+                    <article key={task._id} className="rounded-lg border border-slate-200 p-3 text-sm">
+                      <p className="font-medium text-slate-800">{task.title}</p>
+                      <p className="text-slate-500">{normalizeStatus(task.status)}</p>
+                    </article>
+                  ))}
+                  {!items.length ? <p className="text-sm text-slate-500">No {groupLabel.toLowerCase()} tasks.</p> : null}
+                </div>
+              </div>
             ))}
-            {!summary.assignedTasks.length ? <p className="text-sm text-slate-500">No assigned tasks today.</p> : null}
+            {!summary.assignedTasks.length ? <p className="text-sm text-slate-500">No assigned tasks available.</p> : null}
           </div>
         </PageCard>
 
@@ -149,7 +179,7 @@ export default function EmployeeDashboardPage() {
             {summary.personalTasks.slice(0, 5).map((task) => (
               <article key={task._id} className="rounded-lg border border-slate-200 p-3 text-sm">
                 <p className="font-medium text-slate-800">{task.title}</p>
-                <p className="text-slate-500">{statusLabel[task.status] || task.status}</p>
+                <p className="text-slate-500">{normalizeStatus(task.status)}</p>
               </article>
             ))}
             {!summary.personalTasks.length ? <p className="text-sm text-slate-500">No personal TODO items.</p> : null}
