@@ -45,10 +45,12 @@ const parseAttendanceDateTime = (date, value) => {
   return new Date(`${date}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00+05:30`);
 };
 
+
+
 const detectLate = (dateValue) => {
   if (!dateValue) return false;
   const { hour, minute } = getISTParts(new Date(dateValue));
-  return hour > 9 || (hour === 9 && minute > 45);
+  return hour > 10 || (hour === 10 && minute > 30);
 };
 
 const deriveStatus = (hasCheckIn, isLate) => {
