@@ -97,6 +97,7 @@ export default function TaskListPage() {
   const [personalForm, setPersonalForm] = useState(personalInitial);
   const [editForm, setEditForm] = useState(editInitial);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [statusUpdates, setStatusUpdates] = useState({});
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -104,7 +105,17 @@ export default function TaskListPage() {
 
     try {
       const response = await api.get('/v1/tasks/me');
-      setTasks(response.data?.data || []);
+      const items = response.data?.data || [];
+      setTasks(items);
+      setStatusUpdates(
+        items.reduce((acc, task) => {
+          acc[task._id] = {
+            status: normalizeStatus(task.status),
+            remark: task.remark || ''
+          };
+          return acc;
+        }, {})
+      );
     } catch (apiError) {
       setError(apiError.response?.data?.message || 'Failed to load tasks');
     } finally {
@@ -161,11 +172,18 @@ export default function TaskListPage() {
     return { total, done, inProgress, pending, completion };
   }, [normalizedTasks]);
 
-  const handleStatusChange = async (taskId, status) => {
+  const handleStatusChange = async (taskId) => {
+    const update = statusUpdates[taskId];
+    if (!update?.status) return;
+
     try {
-      await api.patch(`/v1/tasks/${taskId}/status`, { status });
-      setTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status } : task)));
-      toast.success(status === 'Completed' ? 'Task completed' : 'Task status updated');
+      await api.patch(`/v1/tasks/${taskId}/status`, update);
+      setTasks((prev) =>
+        prev.map((task) =>
+          task._id === taskId ? { ...task, status: update.status, remark: update.remark } : task
+        )
+      );
+      toast.success(update.status === 'Completed' ? 'Task completed' : 'Task status updated');
     } catch (apiError) {
       const message = apiError.response?.data?.message || 'Status update failed';
       setError(message);
@@ -341,16 +359,43 @@ export default function TaskListPage() {
                     <span className={`rounded-full px-3 py-1 text-center text-xs font-medium ${statusTone[task.status]}`}>
                       {task.status}
                     </span>
+                  </div>
+                  <div className="w-full max-w-xs space-y-2">
                     <select
-                      value={task.status}
-                      onChange={(event) => handleStatusChange(task._id, event.target.value)}
-                      className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                      value={statusUpdates[task._id]?.status || task.status}
+                      onChange={(event) =>
+                        setStatusUpdates((prev) => ({
+                          ...prev,
+                          [task._id]: { ...(prev[task._id] || {}), status: event.target.value }
+                        }))
+                      }
+                      className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
                     >
                       {statuses.map((status) => (
                         <option key={status} value={status}>{status}</option>
                       ))}
                     </select>
+                    <textarea
+                      value={statusUpdates[task._id]?.remark || ''}
+                      onChange={(event) =>
+                        setStatusUpdates((prev) => ({
+                          ...prev,
+                          [task._id]: { ...(prev[task._id] || {}), remark: event.target.value }
+                        }))
+                      }
+                      placeholder="Remark / Feedback"
+                      rows="2"
+                      className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(task._id)}
+                      className="rounded-md bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+                    >
+                      Update Status
+                    </button>
                   </div>
+                  {task.remark ? <p className="max-w-xs text-xs text-slate-500">Latest Remark: {task.remark}</p> : null}
                   {task.taskType === 'personal' ? (
                     <div className="flex gap-3 text-sm">
                       <button type="button" onClick={() => openEditModal(task)} className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-900">

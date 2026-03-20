@@ -54,6 +54,19 @@ const parseTimeString = (value) => {
   };
 };
 
+const parseBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return Boolean(value);
+};
+
+const validateCheckInOutOrder = (checkInTime, checkOutTime) => {
+  if (checkInTime && checkOutTime && checkOutTime < checkInTime) {
+    throw new ApiError(400, 'Checkout cannot be earlier than check-in');
+  }
+};
+
 const detectLate = async (dateValue) => {
   if (!dateValue) return false;
   const settings = await getOrCreateSettings();
@@ -130,6 +143,7 @@ const submitManualAttendanceEntry = asyncHandler(async (req, res) => {
 
   const parsedCheckIn = parseAttendanceDateTime(date, normalizedCheckIn);
   const parsedCheckOut = parseAttendanceDateTime(date, normalizedCheckOut);
+  validateCheckInOutOrder(parsedCheckIn, parsedCheckOut);
 
   const correction = await AttendanceCorrection.create({
     employeeId: req.user._id,
@@ -245,8 +259,13 @@ const submitCorrectionRequest = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'date is required');
   }
 
+  if (!correctCheckIn && !correctCheckOut) {
+    throw new ApiError(400, 'At least one of check-in or check-out is required');
+  }
+
   const parsedCheckIn = parseAttendanceDateTime(date, correctCheckIn);
   const parsedCheckOut = parseAttendanceDateTime(date, correctCheckOut);
+  validateCheckInOutOrder(parsedCheckIn, parsedCheckOut);
 
   const correction = await AttendanceCorrection.create({
     employeeId: req.user._id,
@@ -320,6 +339,46 @@ const getTodayAttendanceDetails = asyncHandler(async (_req, res) => {
   });
 });
 
+const updateAttendance = asyncHandler(async (req, res) => {
+  const attendance = await Attendance.findById(req.params.id);
+  if (!attendance) {
+    throw new ApiError(404, 'Attendance record not found');
+  }
+
+  const parsedCheckIn = Object.prototype.hasOwnProperty.call(req.body, 'checkIn')
+    ? parseAttendanceDateTime(attendance.date, req.body.checkIn)
+    : attendance.checkInTime;
+  const parsedCheckOut = Object.prototype.hasOwnProperty.call(req.body, 'checkOut')
+    ? parseAttendanceDateTime(attendance.date, req.body.checkOut)
+    : attendance.checkOutTime;
+
+  validateCheckInOutOrder(parsedCheckIn, parsedCheckOut);
+
+  if (Object.prototype.hasOwnProperty.call(req.body, 'checkIn')) {
+    attendance.checkInTime = parsedCheckIn;
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body, 'checkOut')) {
+    attendance.checkOutTime = parsedCheckOut;
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
+    attendance.status = req.body.status;
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body, 'isLate')) {
+    attendance.isLate = parseBoolean(req.body.isLate);
+  } else if (attendance.checkInTime) {
+    attendance.isLate = await detectLate(attendance.checkInTime);
+  }
+
+  attendance.totalWorkMinutes =
+    attendance.checkInTime && attendance.checkOutTime
+      ? Math.max(0, Math.round((attendance.checkOutTime - attendance.checkInTime) / (1000 * 60)))
+      : 0;
+
+  await attendance.save();
+
+  res.status(200).json({ success: true, message: 'Attendance updated', data: attendance });
+});
+
 const reviewCorrectionRequest = asyncHandler(async (req, res) => {
   const { status, reviewNote = '' } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
@@ -337,18 +396,19 @@ const reviewCorrectionRequest = asyncHandler(async (req, res) => {
   await correction.save();
 
   if (status === 'approved') {
-    const attendance = await Attendance.findOneAndUpdate(
-      { employeeId: correction.employeeId, date: correction.date },
-      {
-        $set: {
-          checkInTime: correction.correctCheckIn,
-          checkOutTime: correction.correctCheckOut,
-          notes: correction.note,
-          entrySource: correction.requestType === 'manual-entry' ? 'manual' : 'instant'
-        }
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    const attendance =
+      (await Attendance.findOne({ employeeId: correction.employeeId, date: correction.date })) ||
+      new Attendance({ employeeId: correction.employeeId, date: correction.date });
+
+    if (correction.correctCheckIn) {
+      attendance.checkInTime = correction.correctCheckIn;
+    }
+    if (correction.correctCheckOut) {
+      attendance.checkOutTime = correction.correctCheckOut;
+    }
+    validateCheckInOutOrder(attendance.checkInTime, attendance.checkOutTime);
+    attendance.notes = correction.note;
+    attendance.entrySource = correction.requestType === 'manual-entry' ? 'manual' : 'instant';
 
     attendance.isLate = await detectLate(attendance.checkInTime);
     attendance.status = deriveStatus(Boolean(attendance.checkInTime), attendance.isLate);
@@ -390,6 +450,7 @@ module.exports = {
   getMyAttendance,
   getAttendance,
   getTodayAttendanceDetails,
+  updateAttendance,
   getAttendanceSummary,
   submitCorrectionRequest,
   getMyCorrectionRequests,

@@ -6,6 +6,7 @@ const {
   getMyAttendance,
   getAttendance,
   getTodayAttendanceDetails,
+  updateAttendance,
   getAttendanceSummary,
   submitCorrectionRequest,
   getMyCorrectionRequests,
@@ -24,6 +25,7 @@ router.post('/check-out', authorize('employee', 'admin'), checkOut);
 router.post('/manual-entry', authorize('employee', 'admin'), submitManualAttendanceEntry);
 router.get('/me', authorize('employee', 'admin'), getMyAttendance);
 router.get('/today', authorize('admin'), getTodayAttendanceDetails);
+router.put('/:id', authorize('admin'), updateAttendance);
 router.get('/', authorize('admin'), getAttendance);
 router.get('/summary', authorize('admin'), getAttendanceSummary);
 

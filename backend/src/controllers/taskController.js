@@ -32,6 +32,7 @@ const normalizePriority = (priority = 'Medium') => {
 
 const normalizeDueDate = (deadline, dueDate) => dueDate || deadline || null;
 const normalizeDueTime = (dueTime) => dueTime || '';
+const normalizeRemark = (remark) => (remark || '').trim();
 
 const dueDateSort = [
   {
@@ -52,8 +53,8 @@ const dueDateSort = [
 ];
 
 const applyTaskUpdates = (task, updates, isAdmin) => {
-  const employeeAllowed = ['status', 'title', 'description', 'priority', 'deadline', 'dueDate', 'dueTime'];
-  const adminAllowed = ['title', 'description', 'assignedTo', 'priority', 'status', 'deadline', 'dueDate', 'dueTime', 'taskType'];
+  const employeeAllowed = ['status', 'title', 'description', 'priority', 'deadline', 'dueDate', 'dueTime', 'remark'];
+  const adminAllowed = ['title', 'description', 'assignedTo', 'priority', 'status', 'deadline', 'dueDate', 'dueTime', 'taskType', 'remark'];
   const allowed = isAdmin ? adminAllowed : employeeAllowed;
 
   allowed.forEach((field) => {
@@ -66,6 +67,8 @@ const applyTaskUpdates = (task, updates, isAdmin) => {
         task.dueDate = normalizedDueDate;
       } else if (field === 'dueTime') {
         task.dueTime = normalizeDueTime(updates.dueTime);
+      } else if (field === 'remark') {
+        task.remark = normalizeRemark(updates.remark);
       } else {
         task[field] = updates[field];
       }
@@ -217,7 +220,7 @@ const updateTask = asyncHandler(async (req, res) => {
 });
 
 const updateTaskStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { status, remark } = req.body;
   if (!status) {
     throw new ApiError(400, 'status is required');
   }
@@ -234,6 +237,9 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
   }
 
   task.status = normalizeStatus(status);
+  if (Object.prototype.hasOwnProperty.call(req.body, 'remark')) {
+    task.remark = normalizeRemark(remark);
+  }
   await task.save();
 
   res.status(200).json({ success: true, message: 'Task status updated', data: task });
