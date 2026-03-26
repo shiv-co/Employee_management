@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   createTask,
+  createPersonalTask,
   listMyTasks,
   listTasks,
   exportTasks,
@@ -18,6 +19,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post('/', authorize('employee', 'admin'), createTask);
+router.post('/personal', authorize('employee'), createPersonalTask);
 router.get('/me', authorize('employee', 'admin'), listMyTasks);
 router.get('/export', authorize('admin'), exportTasks);
 router.get('/', authorize('admin'), listTasks);

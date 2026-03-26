@@ -86,6 +86,11 @@ const formatDueDateTime = (task) => {
   return task.dueTime ? `${dateLabel}, ${task.dueTime}` : dateLabel;
 };
 
+const taskTypeBadge = {
+  assigned: 'bg-blue-100 text-blue-700',
+  personal: 'bg-amber-100 text-amber-700'
+};
+
 export default function TaskListPage() {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
@@ -194,7 +199,7 @@ export default function TaskListPage() {
   const createPersonalTask = async (event) => {
     event.preventDefault();
     try {
-      await api.post('/v1/tasks', { ...personalForm, taskType: 'personal' });
+      await api.post('/v1/tasks/personal', personalForm);
       toast.success('Personal task created');
       setPersonalForm(personalInitial);
       await fetchTasks();
@@ -345,10 +350,16 @@ export default function TaskListPage() {
             <div key={task._id} className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-xl">
-                  <p className="font-semibold text-slate-800">{task.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-slate-800">{task.title}</p>
+                    <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${taskTypeBadge[task.taskType] || taskTypeBadge.assigned}`}>
+                      {task.taskType === 'personal' ? 'Personal' : 'Assigned'}
+                    </span>
+                  </div>
                   <p className="mt-1 text-sm text-slate-500">{task.description || 'No description'}</p>
                   <div className="mt-2 space-y-1 text-xs text-slate-500">
                     <p>Type: <span className="capitalize">{task.taskType || 'assigned'}</span></p>
+                    <p>Created By: {task.createdBy?.name || task.assignedBy?.name || '-'}</p>
                     <p>Priority: <span className="capitalize">{task.priority}</span></p>
                     <p>Due: {formatDueDateTime(task)}</p>
                   </div>

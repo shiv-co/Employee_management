@@ -34,6 +34,11 @@ const formatDateTime = (value) => {
   });
 };
 
+const taskTypeBadge = {
+  assigned: 'bg-blue-100 text-blue-700',
+  personal: 'bg-amber-100 text-amber-700'
+};
+
 export default function AdminTaskAssignmentPage() {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
@@ -72,7 +77,8 @@ export default function AdminTaskAssignmentPage() {
         const searchMatch =
           !searchText ||
           task.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-          task.assignedTo?.name?.toLowerCase().includes(searchText.toLowerCase());
+          task.assignedTo?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+          task.createdBy?.name?.toLowerCase().includes(searchText.toLowerCase());
 
         return statusMatch && searchMatch;
       }),
@@ -258,14 +264,21 @@ export default function AdminTaskAssignmentPage() {
                   onClick={() => setExpandedTaskId((prev) => (prev === task._id ? '' : task._id))}
                   className="flex-1 text-left"
                 >
-                  <p className="font-medium text-slate-800">Task: {task.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-slate-800">Task: {task.title}</p>
+                    <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${taskTypeBadge[task.taskType] || taskTypeBadge.assigned}`}>
+                      {task.taskType === 'personal' ? 'Personal' : 'Assigned'}
+                    </span>
+                  </div>
                   <p className="text-slate-600">Assigned To: {task.assignedTo?.name || '-'}</p>
                   {expandedTaskId === task._id ? (
                     <div className="mt-2 space-y-1">
+                      <p className="text-slate-600">Task Type: {task.taskType === 'personal' ? 'Personal Task' : 'Assigned Task'}</p>
                       <p className="text-slate-600">Description: {task.description || '-'}</p>
+                      <p className="text-slate-600">Created By: {task.createdBy?.name || task.assignedBy?.name || '-'}</p>
                       <p className="text-slate-600">Priority: {task.priority || '-'}</p>
                       <p className="text-slate-600">Status: {task.status || '-'}</p>
-                      <p className="text-slate-500">Assigned At: {formatDateTime(task.createdAt)}</p>
+                      <p className="text-slate-500">Created Date: {formatDateTime(task.createdAt)}</p>
                       <p className="text-slate-500">Deadline: {task.deadline ? formatDateTime(task.deadline) : '-'}</p>
                     </div>
                   ) : null}

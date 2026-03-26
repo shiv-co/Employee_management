@@ -23,6 +23,11 @@ const taskSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     taskType: {
       type: String,
       enum: ['assigned', 'personal'],

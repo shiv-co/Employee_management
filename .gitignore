@@ -35,3 +35,7 @@ coverage/
 # Ignore package lock files (optional)
 package-lock.json
 yarn.lock
+
+# Cypress
+cypress/
+cypress.config.js

@@ -113,6 +113,7 @@ const createTask = asyncHandler(async (req, res) => {
     description,
     assignedTo: finalAssignedTo,
     assignedBy: req.user._id,
+    createdBy: req.user._id,
     taskType: finalTaskType,
     priority: normalizePriority(priority),
     status: normalizeStatus(status),
@@ -133,6 +134,16 @@ const createTask = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Task created', data: task });
 });
 
+const createPersonalTask = asyncHandler(async (req, res) => {
+  req.body = {
+    ...req.body,
+    taskType: 'personal',
+    assignedTo: req.user._id
+  };
+
+  return createTask(req, res);
+});
+
 const listMyTasks = asyncHandler(async (req, res) => {
   const { status, priority, taskType } = req.query;
   const query = { assignedTo: req.user._id };
@@ -145,9 +156,17 @@ const listMyTasks = asyncHandler(async (req, res) => {
     ...dueDateSort
   ]);
 
-  const populatedTasks = await Task.populate(tasks, { path: 'assignedBy', select: 'name email' });
+  const populatedTasks = await Task.populate(tasks, [
+    { path: 'assignedBy', select: 'name email role' },
+    { path: 'createdBy', select: 'name email role' }
+  ]);
 
-  res.status(200).json({ success: true, data: populatedTasks });
+  const normalizedTasks = populatedTasks.map((task) => ({
+    ...task,
+    createdBy: task.createdBy || task.assignedBy
+  }));
+
+  res.status(200).json({ success: true, data: normalizedTasks });
 });
 
 const listTasks = asyncHandler(async (req, res) => {
@@ -160,10 +179,16 @@ const listTasks = asyncHandler(async (req, res) => {
 
   const tasks = await Task.find(query)
     .populate('assignedTo', 'name email department')
-    .populate('assignedBy', 'name email')
+    .populate('assignedBy', 'name email role')
+    .populate('createdBy', 'name email role')
     .sort({ createdAt: -1 });
 
-  res.status(200).json({ success: true, data: tasks });
+  const normalizedTasks = tasks.map((task) => ({
+    ...task.toObject(),
+    createdBy: task.createdBy || task.assignedBy
+  }));
+
+  res.status(200).json({ success: true, data: normalizedTasks });
 });
 
 const exportTasks = asyncHandler(async (_req, res) => {
@@ -299,6 +324,7 @@ const deleteTodo = asyncHandler(async (req, res) => {
 
 module.exports = {
   createTask,
+  createPersonalTask,
   listMyTasks,
   listTasks,
   exportTasks,
