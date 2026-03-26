@@ -16,6 +16,7 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const socketRef = useRef(null);
+  const userId = user?.id || user?._id || null;
 
   const refreshNotifications = async ({ unreadOnly = false, silent = false } = {}) => {
     if (!isAuthenticated) return [];
@@ -41,7 +42,7 @@ export function NotificationProvider({ children }) {
 
     try {
       const response = await api.get('/v1/notifications/unread-count');
-      const count = response.data?.data?.unreadCount || 0;
+      const count = response.data?.data?.unreadCount ?? response.data?.unreadCount ?? 0;
       setUnreadCount(count);
       return count;
     } catch (error) {
@@ -65,7 +66,7 @@ export function NotificationProvider({ children }) {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || !user?._id) {
+    if (!isAuthenticated || !userId) {
       setNotifications([]);
       setUnreadCount(0);
       if (socketRef.current) {
@@ -85,7 +86,7 @@ export function NotificationProvider({ children }) {
       });
 
       socket.on('connect', () => {
-        socket.emit('join', user._id);
+        socket.emit('join', userId);
       });
 
       socket.on('notification', (notification) => {
@@ -109,7 +110,7 @@ export function NotificationProvider({ children }) {
         socketRef.current = null;
       }
     };
-  }, [isAuthenticated, user?._id]);
+  }, [isAuthenticated, userId]);
 
   const value = useMemo(
     () => ({
