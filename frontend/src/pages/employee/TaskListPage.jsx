@@ -267,7 +267,7 @@ export default function TaskListPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <PageCard title="Create Personal TODO">
+        <PageCard title="Create TODO">
           <form className="space-y-3" onSubmit={createPersonalTask}>
             <input
               value={personalForm.title}
