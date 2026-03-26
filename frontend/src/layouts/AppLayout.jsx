@@ -122,6 +122,18 @@ export default function AppLayout() {
     }
   }, [bellOpen]);
 
+  const handleBellToggle = async () => {
+    const nextOpen = !bellOpen;
+    setBellOpen(nextOpen);
+
+    if (nextOpen) {
+      await refreshNotifications({ silent: true });
+      if (unreadCount > 0) {
+        await markAllRead();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-app-gradient">
       <header className="sticky top-0 z-20 border-b border-white/70 bg-white/80 backdrop-blur">
@@ -144,7 +156,7 @@ export default function AppLayout() {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setBellOpen((prev) => !prev)}
+                onClick={handleBellToggle}
                 className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
                 aria-label="Notifications"
               >

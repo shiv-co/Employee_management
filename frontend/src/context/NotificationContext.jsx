@@ -91,7 +91,7 @@ export function NotificationProvider({ children }) {
       socket.on('notification', (notification) => {
         setNotifications((prev) => [notification, ...prev].slice(0, 100));
         setUnreadCount((prev) => prev + 1);
-        toast(notification.message, { icon: '??' });
+        toast(notification.message, { icon: '!' });
       });
 
       socketRef.current = socket;

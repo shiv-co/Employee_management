@@ -276,8 +276,9 @@ export default function AdminTaskAssignmentPage() {
                       <p className="text-slate-600">Task Type: {task.taskType === 'personal' ? 'Personal Task' : 'Assigned Task'}</p>
                       <p className="text-slate-600">Description: {task.description || '-'}</p>
                       <p className="text-slate-600">Created By: {task.createdBy?.name || task.assignedBy?.name || '-'}</p>
-                      <p className="text-slate-600">Priority: {task.priority || '-'}</p>
                       <p className="text-slate-600">Status: {task.status || '-'}</p>
+                      <p className="text-slate-600">Priority: {task.priority || '-'}</p>
+                      <p className="text-slate-600">Remark: {task.remark?.trim() ? task.remark : 'No remark added'}</p>
                       <p className="text-slate-500">Created Date: {formatDateTime(task.createdAt)}</p>
                       <p className="text-slate-500">Deadline: {task.deadline ? formatDateTime(task.deadline) : '-'}</p>
                     </div>
