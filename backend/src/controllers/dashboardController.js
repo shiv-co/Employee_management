@@ -1,7 +1,9 @@
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
+const AttendanceCorrection = require('../models/AttendanceCorrection');
 const Task = require('../models/Task');
 const DailyReport = require('../models/DailyReport');
+const LeaveRequest = require('../models/LeaveRequest');
 const asyncHandler = require('../utils/asyncHandler');
 
 const getAdminOverview = asyncHandler(async (_req, res) => {
@@ -121,10 +123,27 @@ const getRecentAssignedTasks = asyncHandler(async (_req, res) => {
   res.status(200).json({ success: true, data: tasks });
 });
 
+const getPendingRequestsCount = asyncHandler(async (_req, res) => {
+  const [pendingLeaveRequests, pendingCorrectionRequests] = await Promise.all([
+    LeaveRequest.countDocuments({ status: 'pending' }),
+    AttendanceCorrection.countDocuments({ status: 'pending' })
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      pendingRequests: pendingLeaveRequests + pendingCorrectionRequests,
+      pendingLeaveRequests,
+      pendingCorrectionRequests
+    }
+  });
+});
+
 module.exports = {
   getAdminOverview,
   getAttendanceTrends,
   getTaskMetrics,
   getReportCompliance,
-  getRecentAssignedTasks
+  getRecentAssignedTasks,
+  getPendingRequestsCount
 };

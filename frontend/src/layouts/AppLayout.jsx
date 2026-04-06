@@ -15,6 +15,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import api from '../api/client';
 
 const navClass = ({ isActive }) =>
   `flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium transition ${
@@ -25,7 +26,17 @@ const navClass = ({ isActive }) =>
 
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
-function SidebarContent({ isAdmin, onNavigate }) {
+function CountBadge({ count }) {
+  if (!count) return null;
+
+  return (
+    <span className="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+      {count}
+    </span>
+  );
+}
+
+function SidebarContent({ isAdmin, onNavigate, requestCount }) {
   return (
     <nav className="flex flex-col gap-1">
       {!isAdmin ? (
@@ -67,7 +78,11 @@ function SidebarContent({ isAdmin, onNavigate }) {
             <FiCalendar /> Attendance Mgmt
           </NavLink>
           <NavLink to="/admin/requests" className={navClass} onClick={onNavigate}>
-            <FiFileText /> Requests
+            <span className="relative inline-flex">
+              <FiFileText />
+              <CountBadge count={requestCount} />
+            </span>
+            Requests
           </NavLink>
           <NavLink to="/admin/settings" className={navClass} onClick={onNavigate}>
             <FiSettings /> Settings
@@ -81,11 +96,71 @@ function SidebarContent({ isAdmin, onNavigate }) {
   );
 }
 
+function NotificationListContent({ isAdmin, latestNotifications, markAllRead, markAsRead, closePanel }) {
+  return (
+    <>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-slate-900">Notifications</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={markAllRead}
+            className="text-xs font-medium text-blue-700 hover:text-blue-900"
+          >
+            Mark all read
+          </button>
+          <Link
+            to={isAdmin ? '/admin/notifications' : '/employee/notifications'}
+            onClick={closePanel}
+            className="text-xs font-medium text-slate-700 hover:text-slate-900"
+          >
+            View all
+          </Link>
+          <button
+            type="button"
+            onClick={closePanel}
+            className="rounded-md border border-slate-300 p-2 text-slate-700 hover:bg-slate-100 md:hidden"
+            aria-label="Close notifications"
+          >
+            <FiX className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1 md:max-h-80">
+        {latestNotifications.map((notification) => (
+          <button
+            key={notification._id}
+            type="button"
+            onClick={async () => {
+              if (!notification.isRead) {
+                await markAsRead(notification._id);
+              }
+              closePanel();
+            }}
+            className="w-full rounded-xl border border-slate-200 p-3 text-left text-sm hover:bg-slate-50"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="break-words whitespace-normal font-medium text-slate-800">{notification.message}</p>
+                <p className="mt-1 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
+              </div>
+              {!notification.isRead ? <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" /> : null}
+            </div>
+          </button>
+        ))}
+        {!latestNotifications.length ? <p className="text-sm text-slate-500">No notifications yet.</p> : null}
+      </div>
+    </>
+  );
+}
+
 export default function AppLayout() {
   const { user, logout, isAuthenticated } = useAuth();
   const { notifications, unreadCount, refreshNotifications, markAsRead, markAllRead } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
   const isAdmin = user?.role === 'admin';
   const latestNotifications = useMemo(() => notifications.slice(0, 6), [notifications]);
 
@@ -116,11 +191,32 @@ export default function AppLayout() {
     return () => clearInterval(reminderInterval);
   }, [isAdmin, isAuthenticated]);
 
+  const fetchRequestCount = async () => {
+    if (!isAdmin) return 0;
+
+    try {
+      const response = await api.get('/v1/dashboard/admin/pending-requests-count');
+      const count = response.data?.data?.pendingRequests ?? response.data?.pendingRequests ?? 0;
+      setRequestCount(count);
+      return count;
+    } catch (_error) {
+      return 0;
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) return undefined;
+
+    fetchRequestCount();
+    const interval = setInterval(fetchRequestCount, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, isAdmin]);
+
   useEffect(() => {
     if (bellOpen) {
       refreshNotifications({ silent: true });
     }
-  }, [bellOpen]);
+  }, [bellOpen, refreshNotifications]);
 
   const handleBellToggle = async () => {
     const nextOpen = !bellOpen;
@@ -153,6 +249,17 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isAdmin ? (
+              <Link
+                to="/admin/requests"
+                className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
+                aria-label="Requests"
+              >
+                <FiFileText className="h-5 w-5" />
+                <CountBadge count={requestCount} />
+              </Link>
+            ) : null}
+
             <div className="relative">
               <button
                 type="button"
@@ -161,61 +268,18 @@ export default function AppLayout() {
                 aria-label="Notifications"
               >
                 <FiBell className="h-5 w-5" />
-                {unreadCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    {unreadCount}
-                  </span>
-                ) : null}
+                <CountBadge count={unreadCount} />
               </button>
 
               {bellOpen ? (
-                <div className="absolute right-0 top-12 z-30 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="font-semibold text-slate-900">Notifications</p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={markAllRead}
-                        className="text-xs font-medium text-blue-700 hover:text-blue-900"
-                      >
-                        Mark all read
-                      </button>
-                      <Link
-                        to={isAdmin ? '/admin/notifications' : '/employee/notifications'}
-                        onClick={() => setBellOpen(false)}
-                        className="text-xs font-medium text-slate-700 hover:text-slate-900"
-                      >
-                        View all
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="max-h-80 space-y-2 overflow-y-auto">
-                    {latestNotifications.map((notification) => (
-                      <button
-                        key={notification._id}
-                        type="button"
-                        onClick={async () => {
-                          if (!notification.isRead) {
-                            await markAsRead(notification._id);
-                          }
-                          setBellOpen(false);
-                        }}
-                        className="w-full rounded-xl border border-slate-200 p-3 text-left text-sm hover:bg-slate-50"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-slate-800">{notification.message}</p>
-                            <p className="mt-1 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
-                          </div>
-                          {!notification.isRead ? (
-                            <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
-                          ) : null}
-                        </div>
-                      </button>
-                    ))}
-                    {!latestNotifications.length ? <p className="text-sm text-slate-500">No notifications yet.</p> : null}
-                  </div>
+                <div className="absolute right-0 top-12 z-30 hidden w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl md:block">
+                  <NotificationListContent
+                    isAdmin={isAdmin}
+                    latestNotifications={latestNotifications}
+                    markAllRead={markAllRead}
+                    markAsRead={markAsRead}
+                    closePanel={() => setBellOpen(false)}
+                  />
                 </div>
               ) : null}
             </div>
@@ -236,7 +300,7 @@ export default function AppLayout() {
 
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 md:grid-cols-[260px_1fr]">
         <aside className="hidden h-fit rounded-2xl border border-white/60 bg-white/90 p-3 shadow-sm backdrop-blur md:block">
-          <SidebarContent isAdmin={isAdmin} />
+          <SidebarContent isAdmin={isAdmin} requestCount={requestCount} />
         </aside>
 
         <main className="space-y-4">
@@ -260,13 +324,25 @@ export default function AppLayout() {
               </button>
             </div>
 
-            <SidebarContent isAdmin={isAdmin} onNavigate={() => setSidebarOpen(false)} />
+            <SidebarContent isAdmin={isAdmin} requestCount={requestCount} onNavigate={() => setSidebarOpen(false)} />
           </aside>
+        </div>
+      ) : null}
+
+      {bellOpen ? (
+        <div className="fixed inset-0 z-40 bg-black/30 md:hidden">
+          <div className="absolute inset-0" onClick={() => setBellOpen(false)} />
+          <div className="absolute inset-x-0 top-0 max-h-[80vh] overflow-y-auto rounded-b-2xl bg-white p-4 shadow-xl">
+            <NotificationListContent
+              isAdmin={isAdmin}
+              latestNotifications={latestNotifications}
+              markAllRead={markAllRead}
+              markAsRead={markAsRead}
+              closePanel={() => setBellOpen(false)}
+            />
+          </div>
         </div>
       ) : null}
     </div>
   );
 }
-
-
-

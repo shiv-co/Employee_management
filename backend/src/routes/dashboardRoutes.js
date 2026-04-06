@@ -4,7 +4,8 @@ const {
   getAttendanceTrends,
   getTaskMetrics,
   getReportCompliance,
-  getRecentAssignedTasks
+  getRecentAssignedTasks,
+  getPendingRequestsCount
 } = require('../controllers/dashboardController');
 const protect = require('../middleware/authMiddleware');
 const authorize = require('../middleware/roleMiddleware');
@@ -18,5 +19,6 @@ router.get('/admin/attendance-trends', getAttendanceTrends);
 router.get('/admin/task-metrics', getTaskMetrics);
 router.get('/admin/report-compliance', getReportCompliance);
 router.get('/admin/recent-tasks', getRecentAssignedTasks);
+router.get('/admin/pending-requests-count', getPendingRequestsCount);
 
 module.exports = router;
