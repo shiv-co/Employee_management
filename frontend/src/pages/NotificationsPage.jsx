@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import PageCard from '../components/PageCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useNotifications } from '../context/NotificationContext';
+import { useDataRefresh } from '../context/DataRefreshContext';
 
 export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { notifications, refreshNotifications, markAsRead: markNotificationRead } = useNotifications();
+  const { refreshState, refreshNotifications: refreshNotificationsModule } = useDataRefresh();
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
       await refreshNotifications({ silent: true });
@@ -18,11 +20,11 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [refreshNotifications]);
 
   useEffect(() => {
     fetchNotifications();
-  }, [showUnreadOnly]);
+  }, [fetchNotifications, showUnreadOnly, refreshState.notifications]);
 
   const visibleNotifications = useMemo(
     () => (showUnreadOnly ? notifications.filter((item) => !item.isRead) : notifications),
@@ -37,6 +39,7 @@ export default function NotificationsPage() {
   const handleMarkAsRead = async (id) => {
     try {
       await markNotificationRead(id);
+      refreshNotificationsModule();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Unable to mark as read');
     }

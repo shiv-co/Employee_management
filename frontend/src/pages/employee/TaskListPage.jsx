@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCheckCircle, FiClock, FiEdit2, FiList, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import api from '../../api/client';
@@ -6,6 +6,7 @@ import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ProgressBar from '../../components/ProgressBar';
 import StatCard from '../../components/StatCard';
+import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const statuses = ['Pending', 'In Progress', 'Completed'];
 const priorities = ['all', 'Low', 'Medium', 'High'];
@@ -103,8 +104,9 @@ export default function TaskListPage() {
   const [editForm, setEditForm] = useState(editInitial);
   const [showEditModal, setShowEditModal] = useState(false);
   const [statusUpdates, setStatusUpdates] = useState({});
+  const { refreshState, refreshTasks } = useDataRefresh();
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -126,11 +128,11 @@ export default function TaskListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [fetchTasks, refreshState.tasks]);
 
   const normalizedTasks = useMemo(
     () =>
@@ -189,6 +191,7 @@ export default function TaskListPage() {
         )
       );
       toast.success(update.status === 'Completed' ? 'Task completed' : 'Task status updated');
+      refreshTasks();
     } catch (apiError) {
       const message = apiError.response?.data?.message || 'Status update failed';
       setError(message);
@@ -202,7 +205,7 @@ export default function TaskListPage() {
       await api.post('/v1/tasks/personal', personalForm);
       toast.success('Personal task created');
       setPersonalForm(personalInitial);
-      await fetchTasks();
+      refreshTasks();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to create personal task');
     }
@@ -233,7 +236,7 @@ export default function TaskListPage() {
       toast.success('TODO updated');
       setShowEditModal(false);
       setEditForm(editInitial);
-      await fetchTasks();
+      refreshTasks();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to update TODO');
     }
@@ -246,7 +249,7 @@ export default function TaskListPage() {
     try {
       await api.delete(`/v1/todos/${taskId}`);
       toast.success('TODO deleted');
-      await fetchTasks();
+      refreshTasks();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to delete TODO');
     }

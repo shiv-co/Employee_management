@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const initialForm = {
   leaveType: 'Casual',
@@ -15,8 +16,9 @@ export default function LeavePage() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [formData, setFormData] = useState(initialForm);
+  const { refreshState, refreshLeaveRequests } = useDataRefresh();
 
-  const fetchLeaves = async () => {
+  const fetchLeaves = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/v1/leaves/me');
@@ -26,11 +28,11 @@ export default function LeavePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLeaves();
-  }, []);
+  }, [fetchLeaves, refreshState.leave]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -38,7 +40,7 @@ export default function LeavePage() {
       await api.post('/v1/leaves', formData);
       toast.success('Leave request submitted');
       setFormData(initialForm);
-      await fetchLeaves();
+      refreshLeaveRequests();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to submit leave request');
     }

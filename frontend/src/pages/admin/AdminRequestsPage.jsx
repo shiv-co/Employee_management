@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const formatISTTime = (value) => {
   if (!value) return '-';
@@ -17,8 +18,9 @@ export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [correctionRequests, setCorrectionRequests] = useState([]);
+  const { refreshState, refreshLeaveRequests, refreshCorrections } = useDataRefresh();
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
       const [leaveRes, correctionRes] = await Promise.all([
@@ -32,17 +34,17 @@ export default function AdminRequestsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [fetchRequests, refreshState.leave, refreshState.corrections]);
 
   const reviewLeave = async (id, status) => {
     try {
       await api.patch(`/v1/leaves/${id}/review`, { status });
       toast.success(`Leave request ${status}`);
-      await fetchRequests();
+      refreshLeaveRequests();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to review leave request');
     }
@@ -52,7 +54,7 @@ export default function AdminRequestsPage() {
     try {
       await api.patch(`/v1/attendance/corrections/${id}/review`, { status });
       toast.success(`Correction request ${status}`);
-      await fetchRequests();
+      refreshCorrections();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Failed to review correction request');
     }

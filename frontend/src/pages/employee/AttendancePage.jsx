@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiCalendar, FiCheckCircle, FiClock } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import api from '../../api/client';
@@ -6,6 +6,7 @@ import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import AttendanceCalendar from '../../components/AttendanceCalendar';
 import StatCard from '../../components/StatCard';
+import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -41,8 +42,9 @@ export default function AttendancePage() {
   const [correctionForm, setCorrectionForm] = useState(correctionInitialState);
   const [manualForm, setManualForm] = useState(manualInitialState);
   const [error, setError] = useState('');
+  const { refreshState, refreshAttendance, refreshCorrections } = useDataRefresh();
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -58,11 +60,11 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAttendance();
-  }, []);
+  }, [fetchAttendance, refreshState.attendance, refreshState.corrections]);
 
   const todayRecord = useMemo(() => records.find((record) => record.date === today), [records]);
 
@@ -96,7 +98,7 @@ export default function AttendancePage() {
       const endpoint = type === 'check-in' ? '/v1/attendance/check-in' : '/v1/attendance/check-out';
       const response = await api.post(endpoint);
       toast.success(response.data?.message || 'Attendance marked');
-      await fetchAttendance();
+      refreshAttendance();
     } catch (apiError) {
       const message = apiError.response?.data?.message || 'Request failed';
       setError(message);
@@ -117,7 +119,7 @@ export default function AttendancePage() {
       });
       toast.success('Attendance correction request submitted');
       setCorrectionForm(correctionInitialState);
-      await fetchAttendance();
+      refreshCorrections();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Unable to submit correction request');
     }
@@ -130,7 +132,8 @@ export default function AttendancePage() {
       await api.post('/v1/attendance/manual-entry', manualForm);
       toast.success('Manual attendance entry submitted');
       setManualForm(manualInitialState);
-      await fetchAttendance();
+      refreshAttendance();
+      refreshCorrections();
     } catch (apiError) {
       toast.error(apiError.response?.data?.message || 'Unable to submit manual entry');
     }
