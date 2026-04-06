@@ -122,8 +122,6 @@ export default function AdminDashboardPage() {
     return Array.from(map.entries()).map(([department, count]) => ({ department, count }));
   }, [employees]);
 
-  if (loading) return <LoadingSpinner text="Loading admin dashboard..." />;
-
   const openAttendanceModal = useCallback(async (type) => {
     setAttendanceLoading(true);
     try {
@@ -136,6 +134,8 @@ export default function AdminDashboardPage() {
       setAttendanceLoading(false);
     }
   }, []);
+
+  if (loading) return <LoadingSpinner text="Loading admin dashboard..." />;
 
   return (
     <>
