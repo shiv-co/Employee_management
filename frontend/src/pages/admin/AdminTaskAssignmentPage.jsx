@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiDownload, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const initialForm = {
   assignedTo: '',
@@ -49,8 +50,9 @@ export default function AdminTaskAssignmentPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [expandedTaskId, setExpandedTaskId] = useState('');
+  const debouncedSearchText = useDebouncedValue(searchText, 250);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [employeesRes, tasksRes] = await Promise.all([
@@ -64,25 +66,25 @@ export default function AdminTaskAssignmentPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const filteredTasks = useMemo(
     () =>
       tasks.filter((task) => {
         const statusMatch = statusFilter === 'all' || task.status === statusFilter;
         const searchMatch =
-          !searchText ||
-          task.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-          task.assignedTo?.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-          task.createdBy?.name?.toLowerCase().includes(searchText.toLowerCase());
+          !debouncedSearchText ||
+          task.title?.toLowerCase().includes(debouncedSearchText.toLowerCase()) ||
+          task.assignedTo?.name?.toLowerCase().includes(debouncedSearchText.toLowerCase()) ||
+          task.createdBy?.name?.toLowerCase().includes(debouncedSearchText.toLowerCase());
 
         return statusMatch && searchMatch;
       }),
-    [tasks, statusFilter, searchText]
+    [debouncedSearchText, statusFilter, tasks]
   );
 
   const handleSubmit = async (event) => {
@@ -100,7 +102,7 @@ export default function AdminTaskAssignmentPage() {
     }
   };
 
-  const openEditModal = (task) => {
+  const openEditModal = useCallback((task) => {
     setEditForm({
       id: task._id,
       assignedTo: task.assignedTo?._id || task.assignedTo?.id || '',
@@ -111,7 +113,7 @@ export default function AdminTaskAssignmentPage() {
       deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : ''
     });
     setShowEditModal(true);
-  };
+  }, []);
 
   const handleEditSave = async (event) => {
     event.preventDefault();

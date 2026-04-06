@@ -6,7 +6,7 @@ import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import AttendanceCalendar from '../../components/AttendanceCalendar';
 import StatCard from '../../components/StatCard';
-import { useDataRefresh } from '../../context/DataRefreshContext';
+import { useDataRefresh, useRefreshSignal } from '../../context/DataRefreshContext';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -42,7 +42,9 @@ export default function AttendancePage() {
   const [correctionForm, setCorrectionForm] = useState(correctionInitialState);
   const [manualForm, setManualForm] = useState(manualInitialState);
   const [error, setError] = useState('');
-  const { refreshState, refreshAttendance, refreshCorrections } = useDataRefresh();
+  const { refreshAttendance, refreshCorrections } = useDataRefresh();
+  const attendanceRefreshSignal = useRefreshSignal('attendance');
+  const correctionsRefreshSignal = useRefreshSignal('corrections');
 
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
@@ -64,7 +66,7 @@ export default function AttendancePage() {
 
   useEffect(() => {
     fetchAttendance();
-  }, [fetchAttendance, refreshState.attendance, refreshState.corrections]);
+  }, [attendanceRefreshSignal, correctionsRefreshSignal, fetchAttendance]);
 
   const todayRecord = useMemo(() => records.find((record) => record.date === today), [records]);
 

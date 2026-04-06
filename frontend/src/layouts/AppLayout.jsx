@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import {
   FiBell,
@@ -26,7 +26,7 @@ const navClass = ({ isActive }) =>
 
 const getTodayKey = () => new Date().toISOString().slice(0, 10);
 
-function CountBadge({ count }) {
+const CountBadge = memo(function CountBadge({ count }) {
   if (!count) return null;
 
   return (
@@ -34,9 +34,11 @@ function CountBadge({ count }) {
       {count}
     </span>
   );
-}
+});
 
-function SidebarContent({ isAdmin, onNavigate, requestCount }) {
+CountBadge.displayName = 'CountBadge';
+
+const SidebarContent = memo(function SidebarContent({ isAdmin, onNavigate, requestCount }) {
   return (
     <nav className="flex flex-col gap-1">
       {!isAdmin ? (
@@ -94,9 +96,17 @@ function SidebarContent({ isAdmin, onNavigate, requestCount }) {
       )}
     </nav>
   );
-}
+});
 
-function NotificationListContent({ isAdmin, latestNotifications, markAllRead, markAsRead, closePanel }) {
+SidebarContent.displayName = 'SidebarContent';
+
+const NotificationListContent = memo(function NotificationListContent({
+  isAdmin,
+  latestNotifications,
+  markAllRead,
+  markAsRead,
+  closePanel
+}) {
   return (
     <>
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -153,7 +163,9 @@ function NotificationListContent({ isAdmin, latestNotifications, markAllRead, ma
       </div>
     </>
   );
-}
+});
+
+NotificationListContent.displayName = 'NotificationListContent';
 
 export default function AppLayout() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -191,7 +203,7 @@ export default function AppLayout() {
     return () => clearInterval(reminderInterval);
   }, [isAdmin, isAuthenticated]);
 
-  const fetchRequestCount = async () => {
+  const fetchRequestCount = useCallback(async () => {
     if (!isAdmin) return 0;
 
     try {
@@ -202,7 +214,7 @@ export default function AppLayout() {
     } catch (_error) {
       return 0;
     }
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) return undefined;
@@ -210,7 +222,7 @@ export default function AppLayout() {
     fetchRequestCount();
     const interval = setInterval(fetchRequestCount, 30000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, isAdmin]);
+  }, [fetchRequestCount, isAuthenticated, isAdmin]);
 
   useEffect(() => {
     if (bellOpen) {
@@ -218,7 +230,7 @@ export default function AppLayout() {
     }
   }, [bellOpen, refreshNotifications]);
 
-  const handleBellToggle = async () => {
+  const handleBellToggle = useCallback(async () => {
     const nextOpen = !bellOpen;
     setBellOpen(nextOpen);
 
@@ -228,7 +240,19 @@ export default function AppLayout() {
         await markAllRead();
       }
     }
-  };
+  }, [bellOpen, markAllRead, refreshNotifications, unreadCount]);
+
+  const closeBellPanel = useCallback(() => {
+    setBellOpen(false);
+  }, []);
+
+  const openSidebar = useCallback(() => {
+    setSidebarOpen(true);
+  }, []);
+
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-app-gradient">
@@ -237,7 +261,7 @@ export default function AppLayout() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setSidebarOpen(true)}
+              onClick={openSidebar}
               className="rounded-lg border border-slate-200 bg-white p-2 text-slate-700 md:hidden"
               aria-label="Open menu"
             >
@@ -278,7 +302,7 @@ export default function AppLayout() {
                     latestNotifications={latestNotifications}
                     markAllRead={markAllRead}
                     markAsRead={markAsRead}
-                    closePanel={() => setBellOpen(false)}
+                    closePanel={closeBellPanel}
                   />
                 </div>
               ) : null}
@@ -300,7 +324,7 @@ export default function AppLayout() {
 
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 md:grid-cols-[260px_1fr]">
         <aside className="hidden h-fit rounded-2xl border border-white/60 bg-white/90 p-3 shadow-sm backdrop-blur md:block">
-          <SidebarContent isAdmin={isAdmin} requestCount={requestCount} />
+            <SidebarContent isAdmin={isAdmin} requestCount={requestCount} />
         </aside>
 
         <main className="space-y-4">
@@ -310,13 +334,13 @@ export default function AppLayout() {
 
       {sidebarOpen ? (
         <div className="fixed inset-0 z-30 md:hidden">
-          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute inset-0 bg-slate-900/40" onClick={closeSidebar} />
           <aside className="absolute left-0 top-0 h-full w-72 rounded-r-2xl border-r border-slate-200 bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <p className="font-semibold text-slate-900">Menu</p>
               <button
                 type="button"
-                onClick={() => setSidebarOpen(false)}
+                onClick={closeSidebar}
                 className="rounded-md border border-slate-300 p-2 text-slate-700"
                 aria-label="Close menu"
               >
@@ -324,21 +348,21 @@ export default function AppLayout() {
               </button>
             </div>
 
-            <SidebarContent isAdmin={isAdmin} requestCount={requestCount} onNavigate={() => setSidebarOpen(false)} />
+            <SidebarContent isAdmin={isAdmin} requestCount={requestCount} onNavigate={closeSidebar} />
           </aside>
         </div>
       ) : null}
 
       {bellOpen ? (
         <div className="fixed inset-0 z-40 bg-black/30 md:hidden">
-          <div className="absolute inset-0" onClick={() => setBellOpen(false)} />
+          <div className="absolute inset-0" onClick={closeBellPanel} />
           <div className="absolute inset-x-0 top-0 max-h-[80vh] overflow-y-auto rounded-b-2xl bg-white p-4 shadow-xl">
             <NotificationListContent
               isAdmin={isAdmin}
               latestNotifications={latestNotifications}
               markAllRead={markAllRead}
               markAsRead={markAsRead}
-              closePanel={() => setBellOpen(false)}
+              closePanel={closeBellPanel}
             />
           </div>
         </div>

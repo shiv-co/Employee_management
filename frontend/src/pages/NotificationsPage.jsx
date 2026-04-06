@@ -3,13 +3,14 @@ import { toast } from 'react-hot-toast';
 import PageCard from '../components/PageCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useNotifications } from '../context/NotificationContext';
-import { useDataRefresh } from '../context/DataRefreshContext';
+import { useDataRefresh, useRefreshSignal } from '../context/DataRefreshContext';
 
 export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const { notifications, refreshNotifications, markAsRead: markNotificationRead } = useNotifications();
-  const { refreshState, refreshNotifications: refreshNotificationsModule } = useDataRefresh();
+  const { refreshNotifications: refreshNotificationsModule } = useDataRefresh();
+  const notificationsRefreshSignal = useRefreshSignal('notifications');
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -24,7 +25,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications, showUnreadOnly, refreshState.notifications]);
+  }, [fetchNotifications, notificationsRefreshSignal, showUnreadOnly]);
 
   const visibleNotifications = useMemo(
     () => (showUnreadOnly ? notifications.filter((item) => !item.isRead) : notifications),

@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useDataRefresh } from '../../context/DataRefreshContext';
+import { useDataRefresh, useRefreshSignal } from '../../context/DataRefreshContext';
 
 const formatISTTime = (value) => {
   if (!value) return '-';
@@ -18,7 +18,9 @@ export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [correctionRequests, setCorrectionRequests] = useState([]);
-  const { refreshState, refreshLeaveRequests, refreshCorrections } = useDataRefresh();
+  const { refreshLeaveRequests, refreshCorrections } = useDataRefresh();
+  const leaveRefreshSignal = useRefreshSignal('leave');
+  const correctionsRefreshSignal = useRefreshSignal('corrections');
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -38,7 +40,7 @@ export default function AdminRequestsPage() {
 
   useEffect(() => {
     fetchRequests();
-  }, [fetchRequests, refreshState.leave, refreshState.corrections]);
+  }, [correctionsRefreshSignal, fetchRequests, leaveRefreshSignal]);
 
   const reviewLeave = async (id, status) => {
     try {

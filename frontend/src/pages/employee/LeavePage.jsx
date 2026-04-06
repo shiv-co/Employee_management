@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import api from '../../api/client';
 import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useDataRefresh } from '../../context/DataRefreshContext';
+import { useDataRefresh, useRefreshSignal } from '../../context/DataRefreshContext';
 
 const initialForm = {
   leaveType: 'Casual',
@@ -16,7 +16,8 @@ export default function LeavePage() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [formData, setFormData] = useState(initialForm);
-  const { refreshState, refreshLeaveRequests } = useDataRefresh();
+  const { refreshLeaveRequests } = useDataRefresh();
+  const leaveRefreshSignal = useRefreshSignal('leave');
 
   const fetchLeaves = useCallback(async () => {
     setLoading(true);
@@ -32,7 +33,7 @@ export default function LeavePage() {
 
   useEffect(() => {
     fetchLeaves();
-  }, [fetchLeaves, refreshState.leave]);
+  }, [fetchLeaves, leaveRefreshSignal]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();

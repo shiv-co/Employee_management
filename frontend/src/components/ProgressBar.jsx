@@ -1,4 +1,6 @@
-export default function ProgressBar({ value = 0, color = 'bg-blue-600' }) {
+import { memo } from 'react';
+
+function ProgressBar({ value = 0, color = 'bg-blue-600' }) {
   const safeValue = Math.min(100, Math.max(0, Math.round(value)));
 
   return (
@@ -10,3 +12,7 @@ export default function ProgressBar({ value = 0, color = 'bg-blue-600' }) {
     </div>
   );
 }
+
+ProgressBar.displayName = 'ProgressBar';
+
+export default memo(ProgressBar);

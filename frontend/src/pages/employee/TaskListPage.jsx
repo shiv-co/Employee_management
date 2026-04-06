@@ -6,7 +6,8 @@ import PageCard from '../../components/PageCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ProgressBar from '../../components/ProgressBar';
 import StatCard from '../../components/StatCard';
-import { useDataRefresh } from '../../context/DataRefreshContext';
+import { useDataRefresh, useRefreshSignal } from '../../context/DataRefreshContext';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 const statuses = ['Pending', 'In Progress', 'Completed'];
 const priorities = ['all', 'Low', 'Medium', 'High'];
@@ -104,7 +105,9 @@ export default function TaskListPage() {
   const [editForm, setEditForm] = useState(editInitial);
   const [showEditModal, setShowEditModal] = useState(false);
   const [statusUpdates, setStatusUpdates] = useState({});
-  const { refreshState, refreshTasks } = useDataRefresh();
+  const { refreshTasks } = useDataRefresh();
+  const tasksRefreshSignal = useRefreshSignal('tasks');
+  const debouncedSearchText = useDebouncedValue(searchText, 250);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -132,7 +135,7 @@ export default function TaskListPage() {
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks, refreshState.tasks]);
+  }, [fetchTasks, tasksRefreshSignal]);
 
   const normalizedTasks = useMemo(
     () =>
@@ -151,9 +154,9 @@ export default function TaskListPage() {
           const priorityMatch = priorityFilter === 'all' || task.priority === priorityFilter;
           const typeMatch = typeFilter === 'all' || task.taskType === typeFilter;
           const searchMatch =
-            !searchText ||
-            task.title?.toLowerCase().includes(searchText.toLowerCase()) ||
-            task.description?.toLowerCase().includes(searchText.toLowerCase());
+            !debouncedSearchText ||
+            task.title?.toLowerCase().includes(debouncedSearchText.toLowerCase()) ||
+            task.description?.toLowerCase().includes(debouncedSearchText.toLowerCase());
 
           return statusMatch && priorityMatch && typeMatch && searchMatch;
         })
@@ -166,7 +169,7 @@ export default function TaskListPage() {
 
           return getTaskDueTimestamp(a) - getTaskDueTimestamp(b);
         }),
-    [normalizedTasks, priorityFilter, searchText, statusFilter, typeFilter]
+    [debouncedSearchText, normalizedTasks, priorityFilter, statusFilter, typeFilter]
   );
 
   const stats = useMemo(() => {

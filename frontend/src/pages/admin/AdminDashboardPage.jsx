@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiCheckCircle, FiClock, FiUserCheck, FiUserX, FiUsers } from 'react-icons/fi';
 import api from '../../api/client';
@@ -53,36 +53,36 @@ export default function AdminDashboardPage() {
     });
   };
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      setLoading(true);
-      setError('');
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    setError('');
 
-      try {
-        const [overviewRes, taskRes, attendanceRes, employeesRes, reportsRes, recentTasksRes] = await Promise.all([
-          api.get('/v1/dashboard/admin/overview'),
-          api.get('/v1/dashboard/admin/task-metrics'),
-          api.get('/v1/dashboard/admin/attendance-trends'),
-          api.get('/v1/employees'),
-          api.get('/v1/reports'),
-          api.get('/v1/dashboard/admin/recent-tasks')
-        ]);
+    try {
+      const [overviewRes, taskRes, attendanceRes, employeesRes, reportsRes, recentTasksRes] = await Promise.all([
+        api.get('/v1/dashboard/admin/overview'),
+        api.get('/v1/dashboard/admin/task-metrics'),
+        api.get('/v1/dashboard/admin/attendance-trends'),
+        api.get('/v1/employees'),
+        api.get('/v1/reports'),
+        api.get('/v1/dashboard/admin/recent-tasks')
+      ]);
 
-        setOverview(overviewRes.data?.data || null);
-        setTaskMetrics(taskRes.data?.data || []);
-        setAttendanceTrends(attendanceRes.data?.data || []);
-        setEmployees(employeesRes.data?.data || []);
-        setReports(reportsRes.data?.data || []);
-        setRecentTasks((recentTasksRes.data?.data || []).slice(0, 5));
-      } catch (apiError) {
-        setError(apiError.response?.data?.message || 'Failed to load admin dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboard();
+      setOverview(overviewRes.data?.data || null);
+      setTaskMetrics(taskRes.data?.data || []);
+      setAttendanceTrends(attendanceRes.data?.data || []);
+      setEmployees(employeesRes.data?.data || []);
+      setReports(reportsRes.data?.data || []);
+      setRecentTasks((recentTasksRes.data?.data || []).slice(0, 5));
+    } catch (apiError) {
+      setError(apiError.response?.data?.message || 'Failed to load admin dashboard');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   const summary = useMemo(() => {
     const totalEmployees = overview?.totalEmployees ?? 0;
@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
 
   if (loading) return <LoadingSpinner text="Loading admin dashboard..." />;
 
-  const openAttendanceModal = async (type) => {
+  const openAttendanceModal = useCallback(async (type) => {
     setAttendanceLoading(true);
     try {
       const response = await api.get('/v1/attendance/today');
@@ -135,7 +135,7 @@ export default function AdminDashboardPage() {
     } finally {
       setAttendanceLoading(false);
     }
-  };
+  }, []);
 
   return (
     <>

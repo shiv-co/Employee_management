@@ -1,4 +1,6 @@
-export default function StatCard({ label, value, hint, tone = 'slate', icon: Icon }) {
+import { memo } from 'react';
+
+function StatCard({ label, value, hint, tone = 'slate', icon: Icon }) {
   const tones = {
     slate: 'from-slate-700 to-slate-900',
     blue: 'from-blue-600 to-indigo-700',
@@ -30,3 +32,7 @@ export default function StatCard({ label, value, hint, tone = 'slate', icon: Ico
     </div>
   );
 }
+
+StatCard.displayName = 'StatCard';
+
+export default memo(StatCard);
