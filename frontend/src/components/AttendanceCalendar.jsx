@@ -15,7 +15,7 @@ const classifyDay = (record, date) => {
 
   if (record?.checkInTime) {
     const checkIn = new Date(record.checkInTime);
-    const isLate = checkIn.getHours() > 10 || (checkIn.getHours() === 10 && checkIn.getMinutes() > 0);
+    const isLate = checkIn.getHours() > 10 || (checkIn.getHours() === 10 && checkIn.getMinutes() > 30);
     if (isLate) {
       return {
         label: 'Late',
